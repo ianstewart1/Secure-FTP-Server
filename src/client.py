@@ -44,7 +44,7 @@ def main():
         # send message to server
         msg = ''
         while msg == '':
-            # here is where user will send commands to server in the future (will require some parsing, yuck!)
+            # here is where user will send commands to server in the future
             msg = input('Msg: ')
         c.writeMsg(msg)
         # wait for response from server
@@ -54,7 +54,7 @@ def main():
             if msg != '':
                 response = True
         # print server response
-        print(f'Response: {msg}')
+        print(f'Server: {msg}')
         time.sleep(0.5)
 
 main()
