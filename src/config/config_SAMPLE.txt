@@ -1,0 +1,2 @@
+client=<Absolute path to client directory here>
+server=<Absolute path to server directory here>
