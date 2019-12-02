@@ -11,6 +11,8 @@ class Network:
             if (self.clientAddress[-1] == '\n'):
                 self.clientAddress = self.clientAddress[:-1]
             self.serverAddress = c.readline().split('=')[1]
+            if (self.serverAddress[-1] == '\n'):
+                self.serverAddress = self.serverAddress[:-1]
 
     def createDirectory(self, addrDir):
         if not os.path.exists(addrDir):
@@ -47,7 +49,9 @@ def main():
     n.clearMsgs(n.serverAddress)
     # message counter (to check what has already been sent)
     clientC, serverC = 0, 0
+    cycles = 0
     while True:
+        print('Running' + '.'*(cycles%4) + ' '*4, end='\r')
         time.sleep(0.5)
         # client to server
         msgs = sorted(os.listdir(n.clientAddress + '/OUT'))
@@ -59,5 +63,6 @@ def main():
         if serverC < len(msgs):
             n.transferToClient(msgs[-1])
             serverC += 1
+        cycles += 1
 
 main()
