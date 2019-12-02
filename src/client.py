@@ -6,7 +6,7 @@ import time
 
 class Client:
     def __init__(self):
-        with open("config.txt", 'r') as c:
+        with open("config\config.txt", 'r') as c:
             self.clientAddress = c.readline().split('=')[1]
             if (self.clientAddress[-1] == '\n'):
                 self.clientAddress = self.clientAddress[:-1]
