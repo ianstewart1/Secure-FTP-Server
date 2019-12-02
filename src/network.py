@@ -23,15 +23,15 @@ class Network:
             os.mkdir(addrDir + '/OUT')
 
     def transferToClient(self, msg):
-        with open(self.serverAddress + '/OUT/' + msg, 'rb') as m:
+        with open(self.serverAddress + '/OUT/' + msg, 'r') as m:
             txt = m.read()
-        with open(self.clientAddress + '/IN/' + msg, 'wb') as m:
+        with open(self.clientAddress + '/IN/' + msg, 'w') as m:
             m.write(txt)
 
     def transferToServer(self, msg):
-        with open(self.clientAddress + '/OUT/' + msg, 'rb') as m:
+        with open(self.clientAddress + '/OUT/' + msg, 'r') as m:
             txt = m.read()
-        with open(self.serverAddress + '/IN/' + msg, 'wb') as m:
+        with open(self.serverAddress + '/IN/' + msg, 'w') as m:
             m.write(txt)
         
     def clearMsgs(self, address):
