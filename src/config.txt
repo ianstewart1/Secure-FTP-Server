@@ -1,2 +1,0 @@
-client=C:\Users\ianst\Documents\AIT\Crypto\Secure-FTP-Server\client
-server=C:\Users\ianst\Documents\AIT\Crypto\Secure-FTP-Server\server
