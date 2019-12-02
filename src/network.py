@@ -5,8 +5,9 @@ import getopt
 import time
 
 class Network:
-    def __init__(self):
-        pass
+    def __init__(self, client, server):
+        self.clientAddress = client
+        self.serverAddress = server
 
     def readMsg(self):
         pass
