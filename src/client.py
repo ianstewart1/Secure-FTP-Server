@@ -11,8 +11,9 @@ from Crypto.Protocol.KDF import scrypt
 
 class Client:
     def __init__(self, client=os.getcwd()):
-        # TODO: Fix so that user input for client is supported
-        self.clientAddress = client.split('src')[0] + 'client'
+        if 'src' in client:
+            client = client.split('src')[0] + 'client'
+        self.clientAddress = client
         self.clientRSAprivate = self.clientAddress + '/clientRSAprivate.pem'
         self.clientRSApublic = self.clientAddress + '/clientRSApublic.pem'
         self.serverRSApublic = self.clientAddress + '/serverRSApublic.pem'
@@ -31,11 +32,11 @@ class Client:
             self.clientRSApublic = RSA.import_key(f.read())
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
-        # client generate a key (master key)
+        # client generate master key
         masterKey = get_random_bytes(32)
         encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
         # send master key, nonce and client public key to server encrypted with server public key
-        msg = encryptRSAcipher.encrypt(masterKey + self.clientRSApublic) # MAC????
+        msg = encryptRSAcipher.encrypt(masterKey + self.clientRSApublic.publickey().export_key()) # MAC????
         self.writeMsg(msg)
         # wait for server response
         resp = self.getResponse()
@@ -55,7 +56,7 @@ class Client:
         self.writeMsg(msg)
         # wait for server response
         resp = self.getResponse()
-        # decrypt
+        # decrypt server response and check MAC/AES key values
         resp = decryptRSAcipher.decrypt(resp)
         if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
             print('Response MAC or AES key does not match. Ending session setup...')

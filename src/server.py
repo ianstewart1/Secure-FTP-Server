@@ -3,14 +3,54 @@ import os
 import sys
 import getopt
 import time
+from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.PublicKey import RSA
+
 
 class Server:
     def __init__(self, server=os.getcwd()):
-        self.serverAddress = server.split('src')[0] + 'server'
+        if 'src' in server:
+            server = server.split('src')[0] + 'server'
+        self.serverAddress = server
+        self.serverRSApublic = self.serverAddress + '/serverRSApublic.pem'
+        self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
+        self.clientRSApublic = None
         self.lastMsg = 0
+        self.MACKey = None
+        self.AESKey = None
 
     def initSession(self):
-        pass
+        with open(self.serverRSApublic, 'rb') as f:
+            self.serverRSApublic = RSA.import_key(f.read())
+        with open(self.serverRSAprivate, 'rb') as f:
+            self.serverRSAprivate = RSA.import_key(f.read())
+        # wait for client message
+        resp = self.getResponse()
+        # decrypt message from client
+        decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
+        resp = decryptRSAcipher.decrypt(resp)
+        self.clientRSApublic = RSA.import_key(resp[32:])
+        # encrypt response to client
+        encryptRSAcipher = PKCS1_OAEP.new(self.clientRSApublic)
+        msg = encryptRSAcipher.encrypt(resp[:32])
+        self.writeMsg(msg)
+        # wait for client message
+        resp = self.getResponse()
+        # decrypt server response and check MAC/AES key values
+        resp = decryptRSAcipher.decrypt(resp)
+        self.MACKey = resp[:32]
+        self.AESKey = resp[32:]
+        msg = encryptRSAcipher.encrypt(resp)
+        self.writeMsg(msg)
+
+    def getResponse(self):
+        # add numTries and make it a timeout?
+        response = False
+        while (not response):
+            resp = self.readMsg()
+            if resp != '':
+                response = True
+        return resp
 
     def writeMsg(self, msg):
         msgs = sorted(os.listdir(self.serverAddress + '/OUT/'))
