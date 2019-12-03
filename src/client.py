@@ -3,29 +3,72 @@ import os
 import sys
 import getopt
 import time
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
+from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.Protocol.KDF import scrypt
+
 
 class Client:
     def __init__(self, client=os.getcwd()):
+        # TODO: Fix so that user input for client is supported
         self.clientAddress = client.split('src')[0] + 'client'
+        self.clientRSAprivate = self.clientAddress + '/clientRSAprivate.pem'
+        self.clientRSApublic = self.clientAddress + '/clientRSApublic.pem'
+        self.serverRSApublic = self.clientAddress + '/serverRSApublic.pem'
+        # used for keeping track of new messages
         self.lastMsg = 0
         # set after initSession - current session keys
         self.MACKey = None
         self.AESKey = None
+        self.iv = None
 
     def initSession(self):
-        # generate an 'x' value for DH (store gx)                                *Use this? https://github.com/deadPix3l/pyDHE/blob/master/lib/pyDHE/
-        # client sends username and (g**x)%p to server (encrypted/signed???)
-        # server should respond with (username, gx, gy) signed with server private key, and (g**y)%p
-        #   - client checks validity of signature and then checks if gx correct (ie. 'server' was able to read last message)
-        # client then sends back (username, gx, gy) signed with private signature key
-        #   - server checks validity of signature and checks if gy is correct (ie. 'client' is same client as in first message)
-        # from here, the master key is computed by both parties and key derivation ensues...
+        print('Establishing session...')
+        with open(self.clientRSAprivate, 'rb') as f:
+            self.clientRSAprivate = RSA.import_key(f.read())
+        with open(self.clientRSApublic, 'rb') as f:
+            self.clientRSApublic = RSA.import_key(f.read())
+        with open(self.serverRSApublic, 'rb') as f:
+            self.serverRSApublic = RSA.import_key(f.read())
+        # client generate a key (master key)
+        masterKey = get_random_bytes(32)
+        encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
+        # send master key, nonce and client public key to server encrypted with server public key
+        msg = encryptRSAcipher.encrypt(masterKey + self.clientRSApublic) # MAC????
+        self.writeMsg(msg)
+        # wait for server response
+        resp = self.getResponse()
+        # decrypt response from server
+        decryptRSAcipher = PKCS1_OAEP.new(self.clientRSAprivate)
+        resp = decryptRSAcipher.decrypt(resp)
+        if (resp != masterKey):
+            print('Response master key does not match. Ending session setup...')
+            exit(1)
+        # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
+        salt = get_random_bytes(32)
+        keys = scrypt(masterKey, salt, 32, 2**20, 8, 1, 2)
+        # set client variables
+        self.MACKey = keys[0]
+        self.AESKey = keys[1]
+        msg = encryptRSAcipher.encrypt(keys[0] + keys[1])
+        self.writeMsg(msg)
+        # wait for server response
+        resp = self.getResponse()
+        # decrypt
+        resp = decryptRSAcipher.decrypt(resp)
+        if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
+            print('Response MAC or AES key does not match. Ending session setup...')
+            exit(1)
+        print('Session established')
 
-        # use key derivation protocol from pycrypto (scrypt or bcrypt) to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
-        #   - client should compute and send over?
-
-        # when does the user send over their public key so that the server can verify signatures?
-        pass
+    def getResponse(self):
+        response = False
+        while (not response):
+            resp = self.readMsg()
+            if resp != '':
+                response = True
+        return resp
 
     def login(self):
         # called at the start of the session
