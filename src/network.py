@@ -5,14 +5,9 @@ import getopt
 import time
 
 class Network:
-    def __init__(self):
-        with open("config/config.txt", 'r') as c:
-            self.clientAddress = c.readline().split('=')[1]
-            if (self.clientAddress[-1] == '\n'):
-                self.clientAddress = self.clientAddress[:-1]
-            self.serverAddress = c.readline().split('=')[1]
-            if (self.serverAddress[-1] == '\n'):
-                self.serverAddress = self.serverAddress[:-1]
+    def __init__(self, client=os.getcwd(), server=os.getcwd()):
+        self.clientAddress = client.split('src')[0] + 'client'
+        self.serverAddress = server.split('src')[0] + 'server'
 
     def createDirectory(self, addrDir):
         if not os.path.exists(addrDir):

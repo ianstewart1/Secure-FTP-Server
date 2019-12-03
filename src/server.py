@@ -5,14 +5,8 @@ import getopt
 import time
 
 class Server:
-    def __init__(self):
-        with open("config/config.txt", 'r') as c:
-            self.clientAddress = c.readline().split('=')[1]
-            if (self.clientAddress[-1] == '\n'):
-                self.clientAddress = self.clientAddress[:-1]
-            self.serverAddress = c.readline().split('=')[1]
-            if (self.serverAddress[-1] == '\n'):
-                self.serverAddress = self.serverAddress[:-1]
+    def __init__(self, server=os.getcwd()):
+        self.serverAddress = server.split('src')[0] + 'server'
         self.lastMsg = 0
 
     def initSession(self):

@@ -5,17 +5,34 @@ import getopt
 import time
 
 class Client:
-    def __init__(self):
-        with open("config/config.txt", 'r') as c:
-            self.clientAddress = c.readline().split('=')[1]
-            if (self.clientAddress[-1] == '\n'):
-                self.clientAddress = self.clientAddress[:-1]
-            self.serverAddress = c.readline().split('=')[1]
-            if (self.serverAddress[-1] == '\n'):
-                self.serverAddress = self.serverAddress[:-1]
+    def __init__(self, client=os.getcwd()):
+        self.clientAddress = client.split('src')[0] + 'client'
         self.lastMsg = 0
+        # set after initSession - current session keys
+        self.MACKey = None
+        self.AESKey = None
 
     def initSession(self):
+        # generate an 'x' value for DH (store gx)                                *Use this? https://github.com/deadPix3l/pyDHE/blob/master/lib/pyDHE/
+        # client sends username and (g**x)%p to server (encrypted/signed???)
+        # server should respond with (username, gx, gy) signed with server private key, and (g**y)%p
+        #   - client checks validity of signature and then checks if gx correct (ie. 'server' was able to read last message)
+        # client then sends back (username, gx, gy) signed with private signature key
+        #   - server checks validity of signature and checks if gy is correct (ie. 'client' is same client as in first message)
+        # from here, the master key is computed by both parties and key derivation ensues...
+
+        # use key derivation protocol from pycrypto (scrypt or bcrypt) to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
+        #   - client should compute and send over?
+
+        # when does the user send over their public key so that the server can verify signatures?
+        pass
+
+    def login(self):
+        # called at the start of the session
+        pass
+
+    def encryptFile(self, file):
+        # because server should not have plaintext
         pass
 
     def writeMsg(self, msg):
