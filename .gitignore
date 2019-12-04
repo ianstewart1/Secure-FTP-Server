@@ -1,2 +1,4 @@
-/server/*
-/client/*
+/server/OUT/*
+/server/IN/*
+/client/OUT/*
+/client/IN/*
