@@ -77,6 +77,9 @@ class Client:
 
     def encryptFile(self, file):
         # because server should not have plaintext
+        with open(file, 'rb') as f:
+            fileContent = f
+        
         pass
 
     def writeMsg(self, msg):

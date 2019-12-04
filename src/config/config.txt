@@ -1,0 +1,4 @@
+client=./NETWORK/CLIENT
+server=./NETWORK/SERVER
+
+*Remove _SAMPLE from file name
