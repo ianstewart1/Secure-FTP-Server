@@ -3,6 +3,7 @@ import os
 import sys
 import getopt
 import time
+import json
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
@@ -86,6 +87,7 @@ class Client:
         # because server should not have plaintext
         with open(file, 'rb') as f:
             fileContent = f
+        
         
         pass
 
