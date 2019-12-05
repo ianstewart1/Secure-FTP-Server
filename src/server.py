@@ -40,8 +40,7 @@ class Server:
 
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
         serverResponse, tag = cipher_aes.encrypt_and_digest(username)
-
-
+        
         self.writeMsg(cipher_aes.nonce + tag + serverResponse)
 
     def loadRSAKeys(self):
