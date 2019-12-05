@@ -54,7 +54,6 @@ class Client:
 
         # Check if the server is logging in the right person
         if(resp.decode('utf-8') != self.username):
-            print("fuck me")
             print(resp)
             exit(1)
         print('Session established')

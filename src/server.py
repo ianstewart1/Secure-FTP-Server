@@ -34,6 +34,10 @@ class Server:
 
         resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
         username, password = resp.split(":".encode('utf-8'))
+        if (not self.authUser(username, password)):
+            print(f'Nice try hacker man, get outta here!')
+            exit(1)
+
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
         serverResponse, tag = cipher_aes.encrypt_and_digest(username)
 
@@ -52,6 +56,13 @@ class Server:
         ciphertext = resp[32:]
 
         return nonce, tag, ciphertext
+
+    def authUser(self, username, passHash):
+        if username in os.listdir(self.serverAddress + '/USERS'):
+            with open(self.serverAddress + '/USERS/' + username + '/.hash_check.hash', 'rb') as f:
+                if passHash == f.read():
+                    return True
+        return False
 
     def getResponse(self):
         # add numTries and make it a timeout?
