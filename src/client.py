@@ -104,8 +104,9 @@ class Client:
         # Encrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_EAX)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
-        [file.write(x)
-         for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
+        with open(file, "wb") as f:
+            [f.write(x)
+             for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
 
     def decryptFile(self, file):
         file_in = open(file, "rb")
@@ -146,11 +147,14 @@ class Client:
 
 def main():
     c = Client()
+    c.loadRSAKeys()
     f = open("test.txt", "w+")
     data = "let's encrypt!"
     f.write(data)
     f.close()
     c.encryptFile("test.txt")
+    print(open("test.txt", "rb").read())
+    c.decryptFile("test.txt")
     # set up session keys and establish secure connection here
     # c.initSession()
     # print(c.MACKey)
