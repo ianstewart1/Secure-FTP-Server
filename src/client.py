@@ -148,6 +148,18 @@ class Client:
         return ''
 
 
+    ### COMMANDS ###
+
+    # • MKD – creating a folder on the server
+    # • RMD – removing a folder from the server
+    # • GWD – asking for the name of the current folder(working directory) on the server
+    # • CWD – changing the current folder on the server
+    # • LST – listing the content of a folder on the server
+    # • UPL – uploading a file to the server
+    # • DNL – downloading a file from the server
+    # • RMF – removing a file from a folder on the server
+
+
 def main():
     c = Client()
     c.loadRSAKeys()
