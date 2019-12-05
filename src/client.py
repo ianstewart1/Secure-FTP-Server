@@ -91,9 +91,11 @@ class Client:
         # called at the start of the session
         pass
 
-    def encryptFile(self, file):
+    def encryptFile(self, file_in, file_out = ""):
+        if(file_out == ""):
+            file_out = file_in
         # because server should not have plaintext
-        with open(file, 'rb') as f:
+        with open(file_in, 'rb') as f:
             data = f.read()
         session_key = get_random_bytes(16)
 
@@ -104,7 +106,7 @@ class Client:
         # Encrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_EAX)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
-        with open(file, "wb") as f:
+        with open(file_out, "wb") as f:
             [f.write(x)
              for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
 
@@ -124,7 +126,8 @@ class Client:
         # Decrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
         data = cipher_aes.decrypt_and_verify(ciphertext, tag)
-        print(data.decode("utf-8"))
+        with open(file, "wb") as f:
+            f.write(data)
 
     def writeMsg(self, msg):
         msgs = sorted(os.listdir(self.clientAddress + '/OUT/'))
@@ -152,9 +155,8 @@ def main():
     data = "let's encrypt!"
     f.write(data)
     f.close()
-    c.encryptFile("test.txt")
-    print(open("test.txt", "rb").read())
-    c.decryptFile("test.txt")
+    c.encryptFile("test.txt", "test1.txt")
+    c.decryptFile("test1.txt")
     # set up session keys and establish secure connection here
     # c.initSession()
     # print(c.MACKey)
