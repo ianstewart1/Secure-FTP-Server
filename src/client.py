@@ -59,7 +59,7 @@ class Client:
         iv = get_random_bytes(AES.block_size)
         encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
         # send master key to server encrypted with server public key
-        msg = encryptRSAcipher.encrypt(masterKey + iv)  # MAC????
+        msg = encryptRSAcipher.encrypt(masterKey + iv) 
         self.writeMsg(msg)
         # wait for server response
         resp = self.getResponse()
@@ -93,12 +93,43 @@ class Client:
 
     def encryptFile(self, file):
         # because server should not have plaintext
-        pass
+        with open(file, 'rb') as f:
+            data = f.read()
+        session_key = get_random_bytes(16)
+
+        # Encrypt the session key with the public RSA key
+        cipher_rsa = PKCS1_OAEP.new(self.clientRSApublic)
+        enc_session_key = cipher_rsa.encrypt(session_key)
+
+        # Encrypt the data with the AES session key
+        cipher_aes = AES.new(session_key, AES.MODE_EAX)
+        ciphertext, tag = cipher_aes.encrypt_and_digest(data)
+        [file.write(x)
+         for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
+
+    def decryptFile(self, file):
+        file_in = open(file, "rb")
+
+        private_key = self.clientRSAprivate
+
+        enc_session_key, nonce, tag, ciphertext = \
+            [file_in.read(x)
+             for x in (private_key.size_in_bytes(), 16, 16, -1)]
+
+        # Decrypt the session key with the private RSA key
+        cipher_rsa = PKCS1_OAEP.new(private_key)
+        session_key = cipher_rsa.decrypt(enc_session_key)
+
+        # Decrypt the data with the AES session key
+        cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+        data = cipher_aes.decrypt_and_verify(ciphertext, tag)
+        print(data.decode("utf-8"))
 
     def writeMsg(self, msg):
         msgs = sorted(os.listdir(self.clientAddress + '/OUT/'))
         if len(msgs) > 0:
-            nextMsg = (int.from_bytes(bytes.fromhex(msgs[-1]), 'big') + 1).to_bytes(2, 'big').hex()
+            nextMsg = (int.from_bytes(bytes.fromhex(
+                msgs[-1]), 'big') + 1).to_bytes(2, 'big').hex()
         else:
             nextMsg = '0000'
         with open(self.clientAddress + '/OUT/' + nextMsg, 'wb') as m:
@@ -115,10 +146,15 @@ class Client:
 
 def main():
     c = Client()
+    f = open("test.txt", "w+")
+    data = "let's encrypt!"
+    f.write(data)
+    f.close()
+    c.encryptFile("test.txt")
     # set up session keys and establish secure connection here
-    c.initSession()
-    print(c.MACKey)
-    print(c.AESKey)
+    # c.initSession()
+    # print(c.MACKey)
+    # print(c.AESKey)
     # while True:
     #     # send message to server
     #     msg = ''
@@ -135,5 +171,6 @@ def main():
     #     # print server response
     #     print(f'Server: {msg}')
     #     time.sleep(0.5)
+
 
 main()
