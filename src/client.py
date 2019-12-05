@@ -1,7 +1,7 @@
 
 import os
 import sys
-import getopt
+import getopt, getpass
 import time
 import json
 from Crypto.PublicKey import RSA
@@ -25,14 +25,20 @@ class Client:
         self.MACKey = None
         self.AESKey = None
         self.iv = None
+        self.username = None
+        self.password = None
 
     def initSession(self):
         print('Establishing session...')
         self.loadRSAKeys()
         # client generate master key
         masterKey, iv = self.initialCheck()
+
         # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
         self.createKeys(masterKey, iv)
+
+        self.login()
+
         print('Session established')
 
     def createKeys(self, masterKey, iv):
@@ -89,7 +95,11 @@ class Client:
 
     def login(self):
         # called at the start of the session
-        pass
+        self.username = input("Enter your username: ")
+        self.password = getpass.getpass("Enter your password: ")
+
+        if(self.username == None or self.password == None):
+            exit(1)
 
     def encryptFile(self, file_in, file_out = ""):
         if(file_out == ""):
@@ -150,17 +160,17 @@ class Client:
 
 def main():
     c = Client()
-    c.loadRSAKeys()
-    f = open("test.txt", "w+")
-    data = "let's encrypt!"
-    f.write(data)
-    f.close()
-    c.encryptFile("test.txt", "test1.txt")
-    c.decryptFile("test1.txt")
+    # c.loadRSAKeys()
+    # f = open("test.txt", "w+")
+    # data = "let's encrypt!"
+    # f.write(data)
+    # f.close()
+    # c.encryptFile("test.txt", "test1.txt")
+    # c.decryptFile("test1.txt")
     # set up session keys and establish secure connection here
-    # c.initSession()
-    # print(c.MACKey)
-    # print(c.AESKey)
+    c.initSession()
+    print(c.MACKey)
+    print(c.AESKey)
     # while True:
     #     # send message to server
     #     msg = ''
