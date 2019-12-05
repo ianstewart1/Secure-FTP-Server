@@ -22,8 +22,9 @@ class Client:
         self.serverRSApublic = self.clientAddress + '/serverRSApublic.pem'
         # used for keeping track of new messages
         self.lastMsg = 0
-        # set after initSession - current session keys
+        # set after initSession - session keys
         self.AESKey = None
+        # user params
         self.username = None
         self.password = None
 
@@ -52,6 +53,7 @@ class Client:
 
         if(resp != self.username):
             exit(1)
+        print('Session established')
 
     def loadRSAKeys(self):
         with open(self.clientRSAprivate, 'rb') as f:
@@ -78,8 +80,8 @@ class Client:
             passwrd = getpass.getpass("Enter your password: ")
         self.username = userN
         # hash passwrd
-        h = HMAC.new(someKey, digestmod=SHA256)
-        self.password = passwrd
+        h = SHA256.new(data=passwrd.encode('utf-8'))
+        self.password = h.digest()
 
 
         if(self.username == None or self.password == None):
