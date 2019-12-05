@@ -30,20 +30,12 @@ class Client:
         print('Establishing session...')
         self.loadRSAKeys()
         # client generate master key
-        masterKey = get_random_bytes(32)
-        iv = get_random_bytes(AES.block_size)
-        encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
-        # send master key to server encrypted with server public key
-        msg = encryptRSAcipher.encrypt(masterKey + iv) # MAC????
-        self.writeMsg(msg)
-        # wait for server response
-        resp = self.getResponse()
-        # decrypt response from server
-        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-        resp = unpad(AEScipher.decrypt(resp), AES.block_size)
-        if (resp != masterKey):
-            print('Response master key does not match. Ending session setup...')
-            exit(1)
+        masterKey, iv = self.initialCheck()
+        # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
+        self.createKeys(masterKey, iv)
+        print('Session established')
+
+    def createKeys(self, masterKey, iv):
         # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
         salt = get_random_bytes(32)
         keys = scrypt(masterKey, salt, 32, 2**20, 8, 1, 2)
@@ -61,7 +53,23 @@ class Client:
         if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
             print('Response MAC or AES key does not match. Ending session setup...')
             exit(1)
-        print('Session established')
+
+    def initialCheck(self):
+        masterKey = get_random_bytes(32)
+        iv = get_random_bytes(AES.block_size)
+        encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
+        # send master key to server encrypted with server public key
+        msg = encryptRSAcipher.encrypt(masterKey + iv)  # MAC????
+        self.writeMsg(msg)
+        # wait for server response
+        resp = self.getResponse()
+        # decrypt response from server
+        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
+        resp = unpad(AEScipher.decrypt(resp), AES.block_size)
+        if (resp != masterKey):
+            print('Response master key does not match. Ending session setup...')
+            exit(1)
+        return masterKey, iv
 
     def loadRSAKeys(self):
         with open(self.clientRSAprivate, 'rb') as f:
@@ -85,10 +93,6 @@ class Client:
 
     def encryptFile(self, file):
         # because server should not have plaintext
-        with open(file, 'rb') as f:
-            fileContent = f
-        
-        
         pass
 
     def writeMsg(self, msg):
