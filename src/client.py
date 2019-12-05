@@ -1,9 +1,6 @@
-
 import os
-import sys
 import getopt, getpass
 import time
-import json
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
@@ -40,23 +37,34 @@ class Client:
 
         # Encrypt the data with the AES session key
         cipher_aes = AES.new(self.AESkey, AES.MODE_GCM)
-        ciphertext, tag = cipher_aes.encrypt_and_digest(self.username + ":" + self.password)
+        ciphertext, tag = cipher_aes.encrypt_and_digest((self.username + ":" + str(self.password)).encode('utf-8'))
 
+        # Send first message
         self.writeMsg(enc_session_key + cipher_aes.nonce + tag + ciphertext)
 
         resp = self.getResponse()
 
-
         # Process Server Response
-        tag = resp[:16]
-        ciphertext = resp[16:]
+        nonce, tag, ciphertext = self.processResp(resp)
+
+        cipher_aes = AES.new(self.AESkey, AES.MODE_GCM, nonce)
+
 
         resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
 
         # Check if the server is logging in the right person
-        if(resp != self.username):
+        if(resp.decode('utf-8') != self.username):
+            print("fuck me")
+            print(resp)
             exit(1)
         print('Session established')
+
+    def processResp(self, resp):
+        nonce = resp[:16]
+        tag = resp[16:32]
+        ciphertext = resp[32:]
+
+        return nonce, tag, ciphertext
 
     def loadRSAKeys(self):
         with open(self.clientRSAprivate, 'rb') as f:
@@ -82,22 +90,17 @@ class Client:
             userN = input("Enter your username: ")
             passwrd = getpass.getpass("Enter your password: ")
         self.username = userN
-        # hash passwrd
         h = SHA256.new(data=passwrd.encode('utf-8'))
         self.password = h.digest()
 
-
-        if(self.username == None or self.password == None):
-            exit(1)
-
-    def encryptFile(self, file_in, file_out = ""):
-        if(file_out == ""):
+    def encryptFile(self, file_in, file_out=''):
+        if file_out == '':
             file_out = file_in
         # because server should not have plaintext
         with open(file_in, 'rb') as f:
             data = f.read()
-        session_key = get_random_bytes(16)
 
+        session_key = get_random_bytes(16)
         # Encrypt the session key with the public RSA key
         cipher_rsa = PKCS1_OAEP.new(self.clientRSApublic)
         enc_session_key = cipher_rsa.encrypt(session_key)
@@ -112,14 +115,12 @@ class Client:
     def decryptFile(self, file):
         file_in = open(file, "rb")
 
-        private_key = self.clientRSAprivate
-
         enc_session_key, nonce, tag, ciphertext = \
             [file_in.read(x)
-             for x in (private_key.size_in_bytes(), 16, 16, -1)]
+             for x in (self.clientRSAprivate.size_in_bytes(), 16, 16, -1)]
 
         # Decrypt the session key with the private RSA key
-        cipher_rsa = PKCS1_OAEP.new(private_key)
+        cipher_rsa = PKCS1_OAEP.new(self.clientRSAprivate)
         session_key = cipher_rsa.decrypt(enc_session_key)
 
         # Decrypt the data with the AES session key
@@ -150,32 +151,25 @@ class Client:
 def main():
     c = Client()
     c.loadRSAKeys()
-    f = open("test.txt", "w+")
-    data = "let's encrypt!"
-    f.write(data)
-    f.close()
-    c.encryptFile("test.txt", "test1.txt")
-    c.decryptFile("test1.txt")
+    c.initializeSession()
     # set up session keys and establish secure connection here
-    # c.initSession()
-    # print(c.MACKey)
-    # print(c.AESKey)
-    # while True:
-    #     # send message to server
-    #     msg = ''
-    #     while msg == '':
-    #         # here is where user will send commands to server in the future
-    #         msg = input('Msg: ')
-    #     c.writeMsg(msg)
-    #     # wait for response from server
-    #     response = False
-    #     while (not response):
-    #         msg = c.readMsg()
-    #         if msg != '':
-    #             response = True
-    #     # print server response
-    #     print(f'Server: {msg}')
-    #     time.sleep(0.5)
+    print(c.AESKey)
+    while True:
+        # send message to server
+        msg = ''
+        while msg == '':
+            # here is where user will send commands to server in the future
+            msg = input('Msg: ')
+        c.writeMsg(msg)
+        # wait for response from server
+        response = False
+        while (not response):
+            msg = c.readMsg()
+            if msg != '':
+                response = True
+        # print server response
+        print(f'Server: {msg}')
+        time.sleep(0.5)
 
 
 main()

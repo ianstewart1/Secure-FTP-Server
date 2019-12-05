@@ -1,4 +1,3 @@
-
 import os
 import sys
 import getopt
@@ -16,7 +15,6 @@ class Server:
         self.serverRSApublic = self.serverAddress + '/serverRSApublic.pem'
         self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
         self.lastMsg = 0
-        self.MACKey = None
         self.AESKey = None
 
     def initSession(self):
@@ -25,29 +23,35 @@ class Server:
         resp = self.getResponse()
         # decrypt message from client
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
-        resp = decryptRSAcipher.decrypt(resp)
-        # encrypt response to client
-        masterKey = resp[:32]
-        iv = resp[32:]
-        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-        msg = AEScipher.encrypt(pad(resp[:32], AES.block_size))
-        self.writeMsg(msg)
-        # wait for client message
-        resp = self.getResponse()
-        # decrypt server response and check MAC/AES key values
-        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-        resp = unpad(AEScipher.decrypt(resp), AES.block_size)
-        self.MACKey = resp[:32]
-        self.AESKey = resp[32:]
-        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-        msg = AEScipher.encrypt(pad(resp, AES.block_size))
-        self.writeMsg(msg)
+        sizeOfKey = self.serverRSApublic.size_in_bytes()
+        # Parse response into relevant parts
+        enc_session_key = resp[:sizeOfKey] 
+        nonce, tag, ciphertext = self.processResp(resp[sizeOfKey:])
+        
+        self.AESKey = decryptRSAcipher.decrypt(enc_session_key)
+
+        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
+
+        resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
+        username, password = resp.split(":".encode('utf-8'))
+        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
+        serverResponse, tag = cipher_aes.encrypt_and_digest(username)
+
+
+        self.writeMsg(cipher_aes.nonce + tag + serverResponse)
 
     def loadRSAKeys(self):
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
         with open(self.serverRSAprivate, 'rb') as f:
             self.serverRSAprivate = RSA.import_key(f.read())
+
+    def processResp(self, resp):
+        nonce = resp[:16]
+        tag = resp[16:32]
+        ciphertext = resp[32:]
+
+        return nonce, tag, ciphertext
 
     def getResponse(self):
         # add numTries and make it a timeout?
@@ -80,8 +84,6 @@ def main():
     s = Server()
     # set up session keys and establish secure connection here
     s.initSession()
-    print(s.MACKey)
-    print(s.AESKey)
     # while True:
     #     # wait for message from client, eventually going to need command parsing (yuck!)
     #     response = False
