@@ -33,8 +33,8 @@ class Server:
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
 
         resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
-        username, password = resp.split(":".encode('utf-8'))
-        if (not self.authUser(username, password)):
+        username, password = resp.split(":".encode("utf-8"))
+        if (not self.authUser(username.decode('utf-8'), password)):
             print(f'Nice try hacker man, get outta here!')
             exit(1)
 

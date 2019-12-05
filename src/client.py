@@ -37,7 +37,8 @@ class Client:
 
         # Encrypt the data with the AES session key
         cipher_aes = AES.new(self.AESkey, AES.MODE_GCM)
-        ciphertext, tag = cipher_aes.encrypt_and_digest((self.username + ":" + str(self.password)).encode('utf-8'))
+        cipherContent = self.username.encode("utf-8") + ":".encode('utf-8')+ self.password
+        ciphertext, tag = cipher_aes.encrypt_and_digest(cipherContent)
 
         # Send first message
         self.writeMsg(enc_session_key + cipher_aes.nonce + tag + ciphertext)
@@ -152,7 +153,6 @@ def main():
     c.loadRSAKeys()
     c.initializeSession()
     # set up session keys and establish secure connection here
-    print(c.AESKey)
     while True:
         # send message to server
         msg = ''
