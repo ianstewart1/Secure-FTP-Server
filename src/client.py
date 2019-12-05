@@ -9,6 +9,7 @@ from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Hash import HMAC, SHA256
 
 
 class Client:
@@ -22,60 +23,35 @@ class Client:
         # used for keeping track of new messages
         self.lastMsg = 0
         # set after initSession - current session keys
-        self.MACKey = None
         self.AESKey = None
-        self.iv = None
         self.username = None
         self.password = None
 
-    def initSession(self):
+    def initializeSession(self):
         print('Establishing session...')
-        self.loadRSAKeys()
-        # client generate master key
-        masterKey, iv = self.initialCheck()
-
-        # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
-        self.createKeys(masterKey, iv)
-
         self.login()
 
-        print('Session established')
+        self.AESkey = get_random_bytes(16)
 
-    def createKeys(self, masterKey, iv):
-        # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
-        salt = get_random_bytes(32)
-        keys = scrypt(masterKey, salt, 32, 2**20, 8, 1, 2)
-        # set client variables
-        self.MACKey = keys[0]
-        self.AESKey = keys[1]
-        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-        msg = AEScipher.encrypt(pad(keys[0] + keys[1], AES.block_size))
-        self.writeMsg(msg)
-        # wait for server response
-        resp = self.getResponse()
-        # decrypt server response and check MAC/AES key values
-        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-        resp = unpad(AEScipher.decrypt(resp), AES.block_size)
-        if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
-            print('Response MAC or AES key does not match. Ending session setup...')
-            exit(1)
+        # Encrypt the session key with the public RSA key
+        cipher_rsa = PKCS1_OAEP.new(self.serverRSApublic)
+        enc_session_key = cipher_rsa.encrypt(self.AESkey)
 
-    def initialCheck(self):
-        masterKey = get_random_bytes(32)
-        iv = get_random_bytes(AES.block_size)
-        encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
-        # send master key to server encrypted with server public key
-        msg = encryptRSAcipher.encrypt(masterKey + iv) 
-        self.writeMsg(msg)
-        # wait for server response
+        # Encrypt the data with the AES session key
+        cipher_aes = AES.new(self.AESkey, AES.MODE_GCM)
+        ciphertext, tag = cipher_aes.encrypt_and_digest("u:" + self.username + "p:" + self.password)
+
+        self.writeMsg(enc_session_key + cipher_aes.nonce + tag + ciphertext)
+
         resp = self.getResponse()
-        # decrypt response from server
-        AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-        resp = unpad(AEScipher.decrypt(resp), AES.block_size)
-        if (resp != masterKey):
-            print('Response master key does not match. Ending session setup...')
+
+        tag = resp[32:48]
+        ciphertext = resp[48:]
+
+        resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
+
+        if(resp != self.username):
             exit(1)
-        return masterKey, iv
 
     def loadRSAKeys(self):
         with open(self.clientRSAprivate, 'rb') as f:
@@ -94,9 +70,17 @@ class Client:
         return resp
 
     def login(self):
-        # called at the start of the session
-        self.username = input("Enter your username: ")
-        self.password = getpass.getpass("Enter your password: ")
+        # called at the start of the 
+        userN = ''
+        passwrd = ''
+        while userN == '' or passwrd == '':
+            userN = input("Enter your username: ")
+            passwrd = getpass.getpass("Enter your password: ")
+        self.username = userN
+        # hash passwrd
+        h = HMAC.new(someKey, digestmod=SHA256)
+        self.password = passwrd
+
 
         if(self.username == None or self.password == None):
             exit(1)
@@ -114,7 +98,7 @@ class Client:
         enc_session_key = cipher_rsa.encrypt(session_key)
 
         # Encrypt the data with the AES session key
-        cipher_aes = AES.new(session_key, AES.MODE_EAX)
+        cipher_aes = AES.new(session_key, AES.MODE_GCM)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
         with open(file_out, "wb") as f:
             [f.write(x)
@@ -134,7 +118,7 @@ class Client:
         session_key = cipher_rsa.decrypt(enc_session_key)
 
         # Decrypt the data with the AES session key
-        cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+        cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
         data = cipher_aes.decrypt_and_verify(ciphertext, tag)
         with open(file, "wb") as f:
             f.write(data)
@@ -160,17 +144,17 @@ class Client:
 
 def main():
     c = Client()
-    # c.loadRSAKeys()
-    # f = open("test.txt", "w+")
-    # data = "let's encrypt!"
-    # f.write(data)
-    # f.close()
-    # c.encryptFile("test.txt", "test1.txt")
-    # c.decryptFile("test1.txt")
+    c.loadRSAKeys()
+    f = open("test.txt", "w+")
+    data = "let's encrypt!"
+    f.write(data)
+    f.close()
+    c.encryptFile("test.txt", "test1.txt")
+    c.decryptFile("test1.txt")
     # set up session keys and establish secure connection here
-    c.initSession()
-    print(c.MACKey)
-    print(c.AESKey)
+    # c.initSession()
+    # print(c.MACKey)
+    # print(c.AESKey)
     # while True:
     #     # send message to server
     #     msg = ''
@@ -190,3 +174,52 @@ def main():
 
 
 main()
+
+
+
+
+
+
+
+
+# def initSession(self):
+    #     print('Establishing session...')
+    #     self.loadRSAKeys()
+    #     # client generate master key
+    #     self.initialCheck()
+    #     # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
+    #     self.createKeys(self.AESKey)
+    #     self.login()
+    #     print('Session established')
+
+    # def createKeys(self, masterKey, iv):
+    #     # set client variables
+    #     AEScipher = AES.new(masterKey, AES.MODE_GCM)
+        
+        
+    #     msg = AEScipher.encrypt(pad(keys[0] + keys[1], AES.block_size))
+    #     self.writeMsg(msg)
+    #     # wait for server response
+    #     resp = self.getResponse()
+    #     # decrypt server response and check MAC/AES key values
+    #     AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
+    #     resp = unpad(AEScipher.decrypt(resp), AES.block_size)
+    #     if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
+    #         print('Response MAC or AES key does not match. Ending session setup...')
+    #         exit(1)
+
+    # def initialCheck(self):
+    #     masterKey = get_random_bytes(32)
+    #     encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
+    #     # send master key to server encrypted with server public key
+    #     msg = encryptRSAcipher.encrypt(masterKey) 
+    #     self.writeMsg(msg)
+    #     # wait for server response
+    #     resp = self.getResponse()
+    #     # decrypt response from server
+    #     AEScipher = AES.new(masterKey, AES.MODE_GCM)
+    #     resp = AEScipher.decrypt(resp), AES.block_size
+    #     if (resp != masterKey):
+    #         print('Response master key does not match. Ending session setup...')
+    #         exit(1)
+    #     return masterKey, iv
