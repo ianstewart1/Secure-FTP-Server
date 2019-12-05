@@ -40,17 +40,20 @@ class Client:
 
         # Encrypt the data with the AES session key
         cipher_aes = AES.new(self.AESkey, AES.MODE_GCM)
-        ciphertext, tag = cipher_aes.encrypt_and_digest("u:" + self.username + "p:" + self.password)
+        ciphertext, tag = cipher_aes.encrypt_and_digest(self.username + ":" + self.password)
 
         self.writeMsg(enc_session_key + cipher_aes.nonce + tag + ciphertext)
 
         resp = self.getResponse()
 
-        tag = resp[32:48]
-        ciphertext = resp[48:]
+
+        # Process Server Response
+        tag = resp[:16]
+        ciphertext = resp[16:]
 
         resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
 
+        # Check if the server is logging in the right person
         if(resp != self.username):
             exit(1)
         print('Session established')
