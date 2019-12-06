@@ -110,6 +110,8 @@ class Server:
                 return m.read()
         return ''
 
+    def getOsPath(self):
+        return self.serverAddress + '/USERS/' + self.currentUser + self.workingDir + "/"
 
 
     ### COMMANDS ###
@@ -127,15 +129,14 @@ class Server:
     def mkd(self, folderName):
         # makes the directory from the working directory
         try: 
-            os.mkdir(self.serverAddress + '/USERS/' + self.currentUser + self.workingDir + "/" + folderName)
+            os.mkdir(self.getOsPath() + folderName)
         except OSError:
             print("Make directory %s failed" % folderName)
         
     def rmd(self, folderName):
         # removes a directory if it exists
         try:
-            os.rmdir(self.serverAddress + '/USERS/' +
-                    self.currentUser + self.workingDir + "/" + folderName)
+            os.rmdir(self.getOsPath() + folderName)
         except OSError:
             print("Deletion of the directory %s failed" % folderName)
     
@@ -144,15 +145,13 @@ class Server:
         self.writeMsg(self.encMsg(self.workingDir))
     
     def cwd(self, newDir):
-        osPath = self.serverAddress + '/USERS/' + \
-            self.currentUser + self.workingDir + "/"
         if (newDir == ".."):
             if(self.workingDir == '/root'):
                 pass
             else:
                 self.workingDir = "/".join(self.workingDir.split("/")[:-1])
         elif (newDir != ".."):
-            if(os.path.exists( osPath + newDir)):
+            if(os.path.exists( self.getOsPath() + newDir)):
                 self.workingDir = self.workingDir+"/"+newDir
     
     def lst(self):
@@ -161,20 +160,17 @@ class Server:
         self.writeMsg(self.encMsg(dirList))
 
     def upl(self, fileName):
+        # TODO
         pass
 
     def dnl(self, fileName):
-        osPath = self.serverAddress + '/USERS/' + \
-            self.currentUser + self.workingDir + "/"
-        with open(osPath+fileName, "rb") as f:
+        with open(self.getOsPath()+fileName, "rb") as f:
             data = f.read()
         self.writeMsg(self.encMsg(data))
 
     def rmf(self, fileName):
-        osPath = self.serverAddress + '/USERS/' + \
-            self.currentUser + self.workingDir + "/"
-        if os.path.exists(osPath + fileName):
-            os.remove(osPath + fileName)
+        if os.path.exists(self.getOsPath() + fileName):
+            os.remove(self.getOsPath() + fileName)
         else:
             print("The file does not exist")
 
