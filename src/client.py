@@ -55,6 +55,9 @@ class Client:
         print('Session established')
 
     def encMsg(self, message):
+        if(type(message) == type("")):
+            message = message.encode('utf-8')
+
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
         cipher_text, tag = cipher_aes.encrypt_and_digest(message)
 

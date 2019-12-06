@@ -40,11 +40,11 @@ class Server:
             print(f'Nice try hacker man, get outta here!')
             exit(1)
 
-        self.currentUser = username
+        self.currentUser = username.decode('utf-8')
         self.workingDir = '/root'
 
         # Create response if login was successful
-        serverResponse = self.encMsg(username)
+        serverResponse = self.encMsg(self.currentUser)
         
         self.writeMsg(serverResponse)
 
@@ -55,6 +55,9 @@ class Server:
             self.serverRSAprivate = RSA.import_key(f.read())
 
     def encMsg(self, message):
+        if(type(message) == type("")):
+            message = message.encode('utf-8')
+
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
         cipher_text, tag = cipher_aes.encrypt_and_digest(message)
 
@@ -117,26 +120,34 @@ class Server:
 
     def mkd(self, folderName):
         # makes the directory from the working directory
-        os.mkdir(self.serverAddress + '/USERS/' + self.currentUser.decode('utf-8') + self.workingDir + "/" + folderName)
-
+        try: 
+            os.mkdir(self.serverAddress + '/USERS/' + self.currentUser + self.workingDir + "/" + folderName)
+        except OSError:
+            print("Make directory %s failed" % folderName)
+        
     def rmd(self, folderName):
         # removes a directory if it exists
-        os.rmdir(self.serverAddress + '/USERS/' +
-                 self.currentUser.decode('utf-8') + self.workingDir + "/" + folderName)
+        try:
+            os.rmdir(self.serverAddress + '/USERS/' +
+                    self.currentUser + self.workingDir + "/" + folderName)
+        except OSError:
+            print("Deletion of the directory %s failed" % folderName)
     
     def gwd(self):
-        self.writeMsg(self.encMsg(self.workingDir.encode('utf-8')))
+        self.writeMsg(self.encMsg(self.workingDir))
     
     def cwd(self, newDir):
         if (newDir == ".." and self.workingDir != '/root'):
+            "".join(self.workingDir.split("/")[-1])
             pass
         elif (newDir != ".."):
             if(self.workingDir + "/" + newDir in os.listdir(self.workingDir)):
                 self.workingDir = self.workingDir+"/"+newDir
     
     def lst(self):
-        print(os.listdir(self.serverAddress + '/USERS/' +
-                   self.currentUser.decode('utf-8') + self.workingDir))
+        dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
+                                     self.currentUser + self.workingDir))
+        self.writeMsg(self.encMsg(dirList))
 
 
 def main():
@@ -145,6 +156,8 @@ def main():
     s.initSession()
     s.gwd()
     s.mkd("test2")
+    s.mkd("test3")
+    s.mkd("test4")
     s.lst()
     s.rmd("test2")
     s.lst()
