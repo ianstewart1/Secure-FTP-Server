@@ -163,9 +163,10 @@ class Server:
                                      self.currentUser + self.workingDir))
         self.writeMsg(self.encMsg(dirList))
 
-    def upl(self, fileName):
-        # TODO
-        pass
+    def upl(self, fileName, data):
+        with open(self.getOsPath()+fileName, 'w+') as f:
+            f.write(data)
+        self.writeMsg(self.encMsg("%s uploaded" %fileName))
 
     def dnl(self, fileName):
         with open(self.getOsPath()+fileName, "rb") as f:
@@ -184,13 +185,6 @@ def main():
     s = Server()
     # set up session keys and establish secure connection here
     s.initSession()
-    # s.mkd("test2")
-    # s.cwd("test2")
-    # s.mkd("test3")
-    # print(s.workingDir)
-    # s.cwd("..")
-    # print(s.workingDir)
-
     while True:
         # wait for message from client, eventually going to need command parsing (yuck!)
         response = False
@@ -213,6 +207,15 @@ def main():
                     s.cwd(msg[4:])
                 elif cmd == "lst":
                     s.lst()
+                elif cmd == "upl":
+                    try:
+                        data = s.readMsg()
+                        fileName = msg[4:]
+                        s.upl(fileName, data)
+                    except:
+                        s.writeMsg(s.encMsg("Error"))
+                else:
+                    s.writeMsg(s.encMsg("invalid command"))
             time.sleep(0.5)
             cycles += 1
         # print client message (for debugging)

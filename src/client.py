@@ -38,7 +38,7 @@ class Client:
 
         # Encrypt the data with the AES session key
         cipherContent = self.username.encode(
-            "utf-8") + ":".encode('utf-8') + self.password
+            'utf-8') + ':'.encode('utf-8') + self.password
         messageContent = self.encMsg(cipherContent)
 
         # Send first message
@@ -50,7 +50,7 @@ class Client:
 
         # Check if the server is logging in the right person
         if resp.decode('utf-8') != self.username:
-            print("Username from server did not match, quitting")
+            print('Username from server did not match, quitting')
             exit(1)
         print('Session established')
 
@@ -104,10 +104,8 @@ class Client:
         self.password = h.digest()
 
     def encryptFile(self, file_in, file_out=''):
-        if file_out == '':
-            file_out = file_in
         # because server should not have plaintext
-        with open(file_in, 'rb') as f:
+        with open(self.clientAddress + '/' + file_in, 'rb') as f:
             data = f.read()
 
         session_key = get_random_bytes(16)
@@ -118,12 +116,17 @@ class Client:
         # Encrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_GCM)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
-        with open(file_out, "wb") as f:
-            [f.write(x)
-             for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
+
+        # If we want to write to another file
+        if file_out != '':
+            with open(self.clientAddress + '/' + file_out, 'wb') as f:
+                [f.write(x)
+                for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
+        
+        return enc_session_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, file):
-        file_in = open(file, "rb")
+        file_in = open(file, 'rb')
         enc_session_key, nonce, tag, ciphertext = \
             [file_in.read(x)
              for x in (self.clientRSAprivate.size_in_bytes(), 16, 16, -1)]
@@ -136,7 +139,7 @@ class Client:
         # Decrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
         data = cipher_aes.decrypt_and_verify(ciphertext, tag)
-        with open(file, "wb") as f:
+        with open(file, 'wb') as f:
             f.write(data)
 
     def writeMsg(self, msg):
@@ -173,6 +176,8 @@ def main():
     c = Client()
     c.loadRSAKeys()
     c.initializeSession()
+    with open('test.txt', 'wb') as f:
+        f.write('encrypt me!'.encode('utf-8'))
     # set up session keys and establish secure connection here
     while True:
         # send message to server
@@ -180,9 +185,12 @@ def main():
         while msg == '':
             # here is where user will send commands to server in the future
             msg = input('Msg: ')
-            if msg == 'upl':
-                c.encryptFile(msg[4:])
-        c.writeMsg(c.encMsg(msg))
+            if msg[:3] == 'upl':
+                data = c.encryptFile(msg[4:])
+                c.writeMsg(c.encMsg(msg))
+                c.writeMsg(data)
+            else:
+                c.writeMsg(c.encMsg(msg))
         # wait for response from server
         response = False
         while (not response):
