@@ -126,23 +126,26 @@ class Server:
     # • RMF – removing a file from a folder on the server
 
 
+
+
     def mkd(self, folderName):
         # makes the directory from the working directory
         try: 
             os.mkdir(self.getOsPath() + folderName)
+            self.writeMsg(self.encMsg("Finished"))
         except OSError:
-            print("Make directory %s failed" % folderName)
+            self.writeMsg(self.encMsg("Mkd Failed"))
         
     def rmd(self, folderName):
         # removes a directory if it exists
         try:
             os.rmdir(self.getOsPath() + folderName)
+            self.writeMsg(self.encMsg("Finished"))
         except OSError:
-            print("Deletion of the directory %s failed" % folderName)
+            self.writeMsg(self.encMsg("Deletion Failed"))
     
     def gwd(self):
-        print("called")
-        self.writeMsg(self.encMsg(self.workingDir))
+        self.writeMsg(self.encMsg("Working directory is: " + self.workingDir))
     
     def cwd(self, newDir):
         if (newDir == ".."):
@@ -153,6 +156,7 @@ class Server:
         elif (newDir != ".."):
             if(os.path.exists( self.getOsPath() + newDir)):
                 self.workingDir = self.workingDir+"/"+newDir
+        self.writeMsg(self.encMsg("Working directory is now: %s" %self.workingDir))
     
     def lst(self):
         dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
@@ -180,28 +184,42 @@ def main():
     s = Server()
     # set up session keys and establish secure connection here
     s.initSession()
-    s.mkd("test2")
-    s.cwd("test2")
-    s.mkd("test3")
-    print(s.workingDir)
-    s.cwd("..")
-    print(s.workingDir)
-    # while True:
-    #     # wait for message from client, eventually going to need command parsing (yuck!)
-    #     response = False
-    #     cycles = 0
-    #     while (not response):
-    #         print('Waiting' + '.'*(cycles%4) + ' '*4, end='\r')
-    #         msg = s.readMsg()
-    #         if msg != '':
-    #             response = True
-    #         time.sleep(0.5)
-    #         cycles += 1
-    #     # print client message (for debugging)
-    #     print(f"Client command: {msg}{' '*20}")
-    #     # send response to client (this will be other stuff eventually)
-    #     msg = 'Message received.'
-    #     s.writeMsg(msg)
-    #     time.sleep(0.5)
+    # s.mkd("test2")
+    # s.cwd("test2")
+    # s.mkd("test3")
+    # print(s.workingDir)
+    # s.cwd("..")
+    # print(s.workingDir)
+
+    while True:
+        # wait for message from client, eventually going to need command parsing (yuck!)
+        response = False
+        cycles = 0
+        while (not response):
+            print('Waiting' + '.'*(cycles%4) + ' '*4, end='\r')
+            msg = s.readMsg()
+            if msg != '':
+                response = True
+                msg = s.processResp(msg).decode('utf-8')
+                print("msg: %s" % msg)
+                cmd = msg[:3]
+                if cmd == "mkd":
+                    s.mkd(msg[4:])
+                elif cmd == "rmd":
+                    s.rmd(msg[4:])
+                elif cmd == "gwd":
+                    s.gwd()
+                elif cmd == "cwd":
+                    s.cwd(msg[4:])
+                elif cmd == "lst":
+                    s.lst()
+            time.sleep(0.5)
+            cycles += 1
+        # print client message (for debugging)
+        print(f"Client command: {msg}{' '*20}")
+        # send response to client (this will be other stuff eventually)
+        # msg = 'Message received.'
+        # s.writeMsg(msg)
+        time.sleep(0.5)
 
 main()
