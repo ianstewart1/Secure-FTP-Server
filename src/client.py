@@ -184,17 +184,18 @@ def main():
         msg = ''
         while msg == '':
             # here is where user will send commands to server in the future
-            msg = input('Msg: ')
+            msg = input('Command: ')
             if msg == 'upl':
                 c.encryptFile(msg[4:])
         c.writeMsg(c.encMsg(msg))
         # wait for response from server
-        response = False
-        while (not response):
-            msg = c.readMsg()
-            if msg != '':
-                response = True
-                msg = c.processResp(msg).decode('utf-8')
+        msg = c.processResp(c.getResponse()).decode('utf-8')
+        # response = False
+        # while (not response):
+        #     msg = c.readMsg()
+        #     if msg != '':
+        #         response = True
+        #         msg = c.processResp(msg).decode('utf-8')
         # print server response
         print(f'Server: {msg}')
         time.sleep(0.5)
