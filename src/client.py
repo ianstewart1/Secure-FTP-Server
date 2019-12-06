@@ -180,7 +180,7 @@ def main():
         while msg == '':
             # here is where user will send commands to server in the future
             msg = input('Msg: ')
-            if msg = 'upl':
+            if msg == 'upl':
                 c.encryptFile(msg[4:])
         c.writeMsg(c.encMsg(msg))
         # wait for response from server
