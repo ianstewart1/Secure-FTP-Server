@@ -45,7 +45,7 @@ class Server:
         h = SHA256.new(data=password)
         password = h.digest()
         if (not self.authUser(username.decode('utf-8'), password)):
-            print(f'Nice try hacker man, get outta here!')
+            print('Nice try hacker man, get outta here!')
             exit(1)
 
         self.currentUser = username.decode('utf-8')
@@ -85,7 +85,12 @@ class Server:
         ciphertext = resp[16:]
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, self.msgNonce)
         self.incNonce()
-        return cipher_aes.decrypt_and_verify(ciphertext, tag)
+        try:
+            plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            return plain
+        except ValueError:
+            print('MAC verification failed, ending session...')
+            exit(1)
 
     def getResponse(self):
         response = False

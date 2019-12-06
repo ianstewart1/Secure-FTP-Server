@@ -78,19 +78,12 @@ class Client:
         ciphertext = resp[16:]
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, self.msgNonce)
         self.incNonce()
-        # TODO: Should we add a try block here to catch bad nonce
-        return cipher_aes.decrypt_and_verify(ciphertext, tag)
-
-    # def processFileResp(self, resp):
-    #     tag = resp[:16]
-    #     ciphertext = resp[16:]
-    #     cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, self.msgNonce)
-    #     data = cipher_aes.decrypt_and_verify(ciphertext, tag)
-    #     nonce = data[:16]
-    #     tag = data[16:32]
-    #     ciphertext = data[32:]
-    #     cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
-    #     return cipher_aes.decrypt_and_verify(ciphertext, tag)
+        try:
+            plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            return plain
+        except ValueError:
+            print('MAC verification failed, ending session...')
+            exit(1)
 
     def loadRSAKeys(self):
         with open(self.clientRSAprivate, 'rb') as f:
@@ -202,8 +195,6 @@ def main():
     c.clearMsgs()
     c.loadRSAKeys()
     c.initializeSession()
-    with open('test.txt', 'wb') as f:
-        f.write('encrypt me!'.encode('utf-8'))
     # set up session keys and establish secure connection here
     while True:
         # send message to server
@@ -222,8 +213,9 @@ def main():
             else:
                 c.writeMsg(c.encMsg(msg))
         # wait for response from server
-        if msg[:3] != 'dnl':
-            # TODO: Set custom downloaded message here
+        if msg[:3] == 'dnl':
+            msg = msg[4:] + ' downloaded'
+        else:
             msg = c.processResp(c.getResponse()).decode('utf-8')
         # print server response
         print(msg)
