@@ -49,8 +49,8 @@ class Client:
         resp = self.processResp(resp)
 
         # Check if the server is logging in the right person
-        if(resp.decode('utf-8') != self.username):
-            print(resp)
+        if resp.decode('utf-8') != self.username:
+            print("Username from server did not match, quitting")
             exit(1)
         print('Session established')
 
