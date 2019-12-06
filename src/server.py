@@ -67,7 +67,7 @@ class Server:
     
 
     def encMsg(self, message):
-        if(type(message) == type("")):
+        if isinstance(message, str):
             message = message.encode('utf-8')
 
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
