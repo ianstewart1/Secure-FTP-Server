@@ -176,11 +176,11 @@ def main():
     # set up session keys and establish secure connection here
     while True:
         # send message to server
-        msg = ''
-        while msg == '':
-            # here is where user will send commands to server in the future
-            msg = input('Msg: ')
-        c.writeMsg(msg)
+        # msg = ''
+        # while msg == '':
+        #     # here is where user will send commands to server in the future
+        #     msg = input('Msg: ')
+        # c.writeMsg(msg)
         # wait for response from server
         response = False
         while (not response):

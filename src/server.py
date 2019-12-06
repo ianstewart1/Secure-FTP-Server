@@ -8,6 +8,9 @@ from Crypto.Util.Padding import pad, unpad
 
 
 class Server:
+
+    ## INITIALIZATION
+    
     def __init__(self, server=os.getcwd()):
         if 'src' in server:
             server = server.split('src')[0] + 'server'
@@ -54,6 +57,15 @@ class Server:
         with open(self.serverRSAprivate, 'rb') as f:
             self.serverRSAprivate = RSA.import_key(f.read())
 
+    def authUser(self, username, passHash):
+        if username in os.listdir(self.serverAddress + '/USERS'):
+            with open(self.serverAddress + '/USERS/' + username + '/.hash_check.hash', 'rb') as f:
+                if passHash == f.read():
+                    return True
+        return False
+
+    
+
     def encMsg(self, message):
         if(type(message) == type("")):
             message = message.encode('utf-8')
@@ -71,13 +83,6 @@ class Server:
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
 
         return cipher_aes.decrypt_and_verify(ciphertext, tag)
-
-    def authUser(self, username, passHash):
-        if username in os.listdir(self.serverAddress + '/USERS'):
-            with open(self.serverAddress + '/USERS/' + username + '/.hash_check.hash', 'rb') as f:
-                if passHash == f.read():
-                    return True
-        return False
 
     def getResponse(self):
         # add numTries and make it a timeout?
@@ -118,6 +123,7 @@ class Server:
     # • DNL – downloading a file from the server
     # • RMF – removing a file from a folder on the server
 
+
     def mkd(self, folderName):
         # makes the directory from the working directory
         try: 
@@ -134,14 +140,19 @@ class Server:
             print("Deletion of the directory %s failed" % folderName)
     
     def gwd(self):
+        print("called")
         self.writeMsg(self.encMsg(self.workingDir))
     
     def cwd(self, newDir):
-        if (newDir == ".." and self.workingDir != '/root'):
-            "".join(self.workingDir.split("/")[-1])
-            pass
+        osPath = self.serverAddress + '/USERS/' + \
+            self.currentUser + self.workingDir + "/"
+        if (newDir == ".."):
+            if(self.workingDir == '/root'):
+                pass
+            else:
+                self.workingDir = "/".join(self.workingDir.split("/")[:-1])
         elif (newDir != ".."):
-            if(self.workingDir + "/" + newDir in os.listdir(self.workingDir)):
+            if(os.path.exists( osPath + newDir)):
                 self.workingDir = self.workingDir+"/"+newDir
     
     def lst(self):
@@ -149,18 +160,36 @@ class Server:
                                      self.currentUser + self.workingDir))
         self.writeMsg(self.encMsg(dirList))
 
+    def upl(self, fileName):
+        pass
+
+    def dnl(self, fileName):
+        osPath = self.serverAddress + '/USERS/' + \
+            self.currentUser + self.workingDir + "/"
+        with open(osPath+fileName, "rb") as f:
+            data = f.read()
+        self.writeMsg(self.encMsg(data))
+
+    def rmf(self, fileName):
+        osPath = self.serverAddress + '/USERS/' + \
+            self.currentUser + self.workingDir + "/"
+        if os.path.exists(osPath + fileName):
+            os.remove(osPath + fileName)
+        else:
+            print("The file does not exist")
+
+
 
 def main():
     s = Server()
     # set up session keys and establish secure connection here
     s.initSession()
-    s.gwd()
     s.mkd("test2")
+    s.cwd("test2")
     s.mkd("test3")
-    s.mkd("test4")
-    s.lst()
-    s.rmd("test2")
-    s.lst()
+    print(s.workingDir)
+    s.cwd("..")
+    print(s.workingDir)
     # while True:
     #     # wait for message from client, eventually going to need command parsing (yuck!)
     #     response = False
