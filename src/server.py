@@ -27,23 +27,21 @@ class Server:
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
         sizeOfKey = self.serverRSApublic.size_in_bytes()
 
-        # Parse response into relevant parts
+        # Parse out and decrypt session key
         enc_session_key = resp[:sizeOfKey] 
-        nonce, tag, ciphertext = self.processResp(resp[sizeOfKey:])
-        
-        # Decrypt user message and set up AES key
         self.AESKey = decryptRSAcipher.decrypt(enc_session_key)
-        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
-        resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
+
+        # Get message content
+        resp = self.processResp(resp[sizeOfKey:])
 
         # Authenticate user
         username, password = resp.split(":".encode("utf-8"))
         if (not self.authUser(username.decode('utf-8'), password)):
             print(f'Nice try hacker man, get outta here!')
             exit(1)
-        else:
-            self.currentUser = username
-            self.workingDir = self.serverAddress + '/USERS/' + username + '/root'
+
+        self.currentUser = username
+        self.workingDir = '/root'
 
         # Create response if login was successful
         serverResponse = self.encMsg(username)
@@ -67,7 +65,9 @@ class Server:
         tag = resp[16:32]
         ciphertext = resp[32:]
 
-        return nonce, tag, ciphertext
+        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
+
+        return cipher_aes.decrypt_and_verify(ciphertext, tag)
 
     def authUser(self, username, passHash):
         if username in os.listdir(self.serverAddress + '/USERS'):
@@ -116,13 +116,16 @@ class Server:
     # • RMF – removing a file from a folder on the server
 
     def mkd(self, folderName):
-        pass
+        # makes the directory from the working directory
+        os.mkdir(self.serverAddress + '/USERS/' + self.currentUser.decode('utf-8') + self.workingDir + "/" + folderName)
 
     def rmd(self, folderName):
-        pass
+        # removes a directory if it exists
+        os.rmdir(self.serverAddress + '/USERS/' +
+                 self.currentUser.decode('utf-8') + self.workingDir + "/" + folderName)
     
     def gwd(self):
-        self.writeMsg(self.encMsg(self.workingDir))
+        self.writeMsg(self.encMsg(self.workingDir.encode('utf-8')))
     
     def cwd(self, newDir):
         if (newDir == ".." and self.workingDir != '/root'):
@@ -130,12 +133,21 @@ class Server:
         elif (newDir != ".."):
             if(self.workingDir + "/" + newDir in os.listdir(self.workingDir)):
                 self.workingDir = self.workingDir+"/"+newDir
+    
+    def lst(self):
+        print(os.listdir(self.serverAddress + '/USERS/' +
+                   self.currentUser.decode('utf-8') + self.workingDir))
 
 
 def main():
     s = Server()
     # set up session keys and establish secure connection here
     s.initSession()
+    s.gwd()
+    s.mkd("test2")
+    s.lst()
+    s.rmd("test2")
+    s.lst()
     # while True:
     #     # wait for message from client, eventually going to need command parsing (yuck!)
     #     response = False

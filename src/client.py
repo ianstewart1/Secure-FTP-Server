@@ -1,5 +1,6 @@
 import os
-import getopt, getpass
+import getopt
+import getpass
 import time
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
@@ -29,29 +30,23 @@ class Client:
         print('Establishing session...')
         self.login()
 
-        self.AESkey = get_random_bytes(16)
+        self.AESKey = get_random_bytes(16)
 
         # Encrypt the session key with the public RSA key
         cipher_rsa = PKCS1_OAEP.new(self.serverRSApublic)
-        enc_session_key = cipher_rsa.encrypt(self.AESkey)
+        enc_session_key = cipher_rsa.encrypt(self.AESKey)
 
         # Encrypt the data with the AES session key
-        cipher_aes = AES.new(self.AESkey, AES.MODE_GCM)
-        cipherContent = self.username.encode("utf-8") + ":".encode('utf-8')+ self.password
-        ciphertext, tag = cipher_aes.encrypt_and_digest(cipherContent)
+        cipherContent = self.username.encode(
+            "utf-8") + ":".encode('utf-8') + self.password
+        messageContent = self.encMsg(cipherContent)
 
         # Send first message
-        self.writeMsg(enc_session_key + cipher_aes.nonce + tag + ciphertext)
+        self.writeMsg(enc_session_key + messageContent)
 
+        # Receive and Process Server Response
         resp = self.getResponse()
-
-        # Process Server Response
-        nonce, tag, ciphertext = self.processResp(resp)
-
-        cipher_aes = AES.new(self.AESkey, AES.MODE_GCM, nonce)
-
-
-        resp = cipher_aes.decrypt_and_verify(ciphertext, tag)
+        resp = self.processResp(resp)
 
         # Check if the server is logging in the right person
         if(resp.decode('utf-8') != self.username):
@@ -59,12 +54,23 @@ class Client:
             exit(1)
         print('Session established')
 
+    def encMsg(self, message):
+        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
+        cipher_text, tag = cipher_aes.encrypt_and_digest(message)
+
+        return cipher_aes.nonce + tag + cipher_text
+
     def processResp(self, resp):
+        """
+        Takes in a message and returns the plaintext using the AESKey
+        """
         nonce = resp[:16]
         tag = resp[16:32]
         ciphertext = resp[32:]
 
-        return nonce, tag, ciphertext
+        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
+
+        return cipher_aes.decrypt_and_verify(ciphertext, tag)
 
     def loadRSAKeys(self):
         with open(self.clientRSAprivate, 'rb') as f:
@@ -75,6 +81,7 @@ class Client:
             self.serverRSApublic = RSA.import_key(f.read())
 
     def getResponse(self):
+        """Awaits a response from the server. Returns content when one is detected"""
         response = False
         while (not response):
             resp = self.readMsg()
@@ -83,7 +90,7 @@ class Client:
         return resp
 
     def login(self):
-        # called at the start of the 
+        # called at the start of the
         userN = ''
         passwrd = ''
         while userN == '' or passwrd == '':
@@ -147,7 +154,6 @@ class Client:
                 return m.read()
         return ''
 
-
     ### COMMANDS ###
 
     # • MKD – creating a folder on the server
@@ -186,50 +192,43 @@ def main():
 main()
 
 
-
-
-
-
-
-
 # def initSession(self):
-    #     print('Establishing session...')
-    #     self.loadRSAKeys()
-    #     # client generate master key
-    #     self.initialCheck()
-    #     # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
-    #     self.createKeys(self.AESKey)
-    #     self.login()
-    #     print('Session established')
+#     print('Establishing session...')
+#     self.loadRSAKeys()
+#     # client generate master key
+#     self.initialCheck()
+#     # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
+#     self.createKeys(self.AESKey)
+#     self.login()
+#     print('Session established')
 
-    # def createKeys(self, masterKey, iv):
-    #     # set client variables
-    #     AEScipher = AES.new(masterKey, AES.MODE_GCM)
-        
-        
-    #     msg = AEScipher.encrypt(pad(keys[0] + keys[1], AES.block_size))
-    #     self.writeMsg(msg)
-    #     # wait for server response
-    #     resp = self.getResponse()
-    #     # decrypt server response and check MAC/AES key values
-    #     AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-    #     resp = unpad(AEScipher.decrypt(resp), AES.block_size)
-    #     if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
-    #         print('Response MAC or AES key does not match. Ending session setup...')
-    #         exit(1)
+# def createKeys(self, masterKey, iv):
+#     # set client variables
+#     AEScipher = AES.new(masterKey, AES.MODE_GCM)
 
-    # def initialCheck(self):
-    #     masterKey = get_random_bytes(32)
-    #     encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
-    #     # send master key to server encrypted with server public key
-    #     msg = encryptRSAcipher.encrypt(masterKey) 
-    #     self.writeMsg(msg)
-    #     # wait for server response
-    #     resp = self.getResponse()
-    #     # decrypt response from server
-    #     AEScipher = AES.new(masterKey, AES.MODE_GCM)
-    #     resp = AEScipher.decrypt(resp), AES.block_size
-    #     if (resp != masterKey):
-    #         print('Response master key does not match. Ending session setup...')
-    #         exit(1)
-    #     return masterKey, iv
+#     msg = AEScipher.encrypt(pad(keys[0] + keys[1], AES.block_size))
+#     self.writeMsg(msg)
+#     # wait for server response
+#     resp = self.getResponse()
+#     # decrypt server response and check MAC/AES key values
+#     AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
+#     resp = unpad(AEScipher.decrypt(resp), AES.block_size)
+#     if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
+#         print('Response MAC or AES key does not match. Ending session setup...')
+#         exit(1)
+
+# def initialCheck(self):
+#     masterKey = get_random_bytes(32)
+#     encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
+#     # send master key to server encrypted with server public key
+#     msg = encryptRSAcipher.encrypt(masterKey)
+#     self.writeMsg(msg)
+#     # wait for server response
+#     resp = self.getResponse()
+#     # decrypt response from server
+#     AEScipher = AES.new(masterKey, AES.MODE_GCM)
+#     resp = AEScipher.decrypt(resp), AES.block_size
+#     if (resp != masterKey):
+#         print('Response master key does not match. Ending session setup...')
+#         exit(1)
+#     return masterKey, iv
