@@ -11,6 +11,7 @@ from Crypto.Hash import HMAC, SHA256
 
 
 class Client:
+
     def __init__(self, client=os.getcwd()):
         if 'src' in client:
             client = client.split('src')[0] + 'client'
@@ -57,13 +58,11 @@ class Client:
     def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
-
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
         if(data!=b''):
             cipher_text, tag = cipher_aes.encrypt_and_digest(message + " ".encode('utf-8') + data)
         else:
             cipher_text, tag = cipher_aes.encrypt_and_digest(message)
-
         return cipher_aes.nonce + tag + cipher_text
 
     def processResp(self, resp):
@@ -73,9 +72,7 @@ class Client:
         nonce = resp[:16]
         tag = resp[16:32]
         ciphertext = resp[32:]
-
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
-
         return cipher_aes.decrypt_and_verify(ciphertext, tag)
 
     def loadRSAKeys(self):
@@ -125,7 +122,6 @@ class Client:
             with open(self.clientAddress + '/' + file_out, 'wb') as f:
                 [f.write(x)
                 for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
-        
         return enc_session_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, file):
@@ -193,7 +189,7 @@ def main():
         # send message to server
         msg = ''
         while msg == '':
-            msg = input('Msg: ')
+            msg = input('Command: ')
             if msg[:3] == 'upl':
                 data = c.encryptFile(msg[4:])
                 c.writeMsg(c.encMsg(msg, data))
@@ -201,69 +197,18 @@ def main():
                 c.writeMsg(c.encMsg(msg))
                 data = c.getResponse()
                 data = c.processResp(data)
-                print(data)
                 with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
                     f.write(data)
                 c.decryptFile(msg[4:])
-
             else:
                 c.writeMsg(c.encMsg(msg))
         # wait for response from server
         if msg[:3] != 'dnl':
+            # TODO: Set custom downloaded message here
             msg = c.processResp(c.getResponse()).decode('utf-8')
-        # response = False
-        # while (not response):
-        #     msg = c.readMsg()
-        #     if msg != '':
-        #         response = True
-        #         msg = c.processResp(msg).decode('utf-8')
         # print server response
-        print(f'Server: {msg}')
+        print(msg)
         time.sleep(0.5)
 
 
 main()
-
-
-
-
-# def initSession(self):
-#     print('Establishing session...')
-#     self.loadRSAKeys()
-#     # client generate master key
-#     self.initialCheck()
-#     # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
-#     self.createKeys(self.AESKey)
-#     self.login()
-#     print('Session established')
-
-# def createKeys(self, masterKey, iv):
-#     # set client variables
-#     AEScipher = AES.new(masterKey, AES.MODE_GCM)
-
-#     msg = AEScipher.encrypt(pad(keys[0] + keys[1], AES.block_size))
-#     self.writeMsg(msg)
-#     # wait for server response
-#     resp = self.getResponse()
-#     # decrypt server response and check MAC/AES key values
-#     AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-#     resp = unpad(AEScipher.decrypt(resp), AES.block_size)
-#     if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
-#         print('Response MAC or AES key does not match. Ending session setup...')
-#         exit(1)
-
-# def initialCheck(self):
-#     masterKey = get_random_bytes(32)
-#     encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
-#     # send master key to server encrypted with server public key
-#     msg = encryptRSAcipher.encrypt(masterKey)
-#     self.writeMsg(msg)
-#     # wait for server response
-#     resp = self.getResponse()
-#     # decrypt response from server
-#     AEScipher = AES.new(masterKey, AES.MODE_GCM)
-#     resp = AEScipher.decrypt(resp), AES.block_size
-#     if (resp != masterKey):
-#         print('Response master key does not match. Ending session setup...')
-#         exit(1)
-#     return masterKey, iv
