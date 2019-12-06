@@ -7,7 +7,6 @@ from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Util.Padding import pad, unpad
-from Crypto.Hash import HMAC, SHA256
 
 
 class Client:
@@ -40,7 +39,7 @@ class Client:
 
         # Encrypt the data with the AES session key
         cipherContent = self.username.encode(
-            'utf-8') + ':'.encode('utf-8') + self.password
+            'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
         # Initilize AES nonce (replay protection)
         zero = 0
         randomBytes = get_random_bytes(8)
@@ -118,9 +117,7 @@ class Client:
             userN = input("Enter your username: ")
             passwrd = getpass.getpass("Enter your password: ")
         self.username = userN
-        # TODO: So maybe dont do this... :(
-        h = SHA256.new(data=passwrd.encode('utf-8'))
-        self.password = h.digest()
+        self.password = passwrd
 
     def encryptFile(self, file_in, file_out=''):
         # because server should not have plaintext

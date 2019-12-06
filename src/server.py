@@ -4,6 +4,7 @@ import time
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Hash import SHA256
 
 
 class Server:
@@ -41,6 +42,8 @@ class Server:
 
         # Authenticate user
         username, password = resp.split(":".encode("utf-8"))
+        h = SHA256.new(data=password)
+        password = h.digest()
         if (not self.authUser(username.decode('utf-8'), password)):
             print(f'Nice try hacker man, get outta here!')
             exit(1)
@@ -161,9 +164,10 @@ class Server:
         self.writeMsg(self.encMsg("Working directory is now: %s" %self.workingDir))
     
     def lst(self):
-        # TODO: perhaps return a value if there is nothing in the folder?
         dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
                                      self.currentUser + self.workingDir))
+        if len(dirList) == 0:
+            dirList = '<empty>'
         self.writeMsg(self.encMsg(dirList))
 
     def upl(self, fileName, data):
