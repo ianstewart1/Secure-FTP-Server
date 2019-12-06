@@ -181,6 +181,7 @@ class Client:
 
 
 def main():
+    # TODO: add getopt to specify client folder destination
     c = Client()
     c.clearMsgs()
     c.loadRSAKeys()

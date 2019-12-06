@@ -1,5 +1,4 @@
 import os
-import sys
 import getopt
 import time
 from Crypto.Cipher import AES, PKCS1_OAEP
@@ -64,7 +63,6 @@ class Server:
                     return True
         return False
 
-    
     def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
@@ -130,9 +128,6 @@ class Server:
     # • UPL – uploading a file to the server
     # • DNL – downloading a file from the server
     # • RMF – removing a file from a folder on the server
-
-
-
 
     def mkd(self, folderName):
         # makes the directory from the working directory
