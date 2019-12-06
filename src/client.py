@@ -55,7 +55,7 @@ class Client:
         print('Session established')
 
     def encMsg(self, message):
-        if(type(message) == type("")):
+        if isinstance(message, str):
             message = message.encode('utf-8')
 
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
@@ -93,7 +93,7 @@ class Client:
         return resp
 
     def login(self):
-        # called at the start of the
+        # called at the start of a session
         userN = ''
         passwrd = ''
         while userN == '' or passwrd == '':
@@ -124,10 +124,10 @@ class Client:
 
     def decryptFile(self, file):
         file_in = open(file, "rb")
-
         enc_session_key, nonce, tag, ciphertext = \
             [file_in.read(x)
              for x in (self.clientRSAprivate.size_in_bytes(), 16, 16, -1)]
+        file_in.close()
 
         # Decrypt the session key with the private RSA key
         cipher_rsa = PKCS1_OAEP.new(self.clientRSAprivate)
