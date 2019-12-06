@@ -54,12 +54,15 @@ class Client:
             exit(1)
         print('Session established')
 
-    def encMsg(self, message):
+    def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
 
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
-        cipher_text, tag = cipher_aes.encrypt_and_digest(message)
+        if(data!=b''):
+            cipher_text, tag = cipher_aes.encrypt_and_digest(message + " ".encode('utf-8') + data)
+        else:
+            cipher_text, tag = cipher_aes.encrypt_and_digest(message)
 
         return cipher_aes.nonce + tag + cipher_text
 
@@ -126,6 +129,7 @@ class Client:
         return enc_session_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, file):
+        file = self.clientAddress + '/' + file
         file_in = open(file, 'rb')
         enc_session_key, nonce, tag, ciphertext = \
             [file_in.read(x)
@@ -188,16 +192,22 @@ def main():
         # send message to server
         msg = ''
         while msg == '':
-            # here is where user will send commands to server in the future
             msg = input('Msg: ')
             if msg[:3] == 'upl':
                 data = c.encryptFile(msg[4:])
+                c.writeMsg(c.encMsg(msg, data))
+            elif msg[:3] == 'dnl':
                 c.writeMsg(c.encMsg(msg))
-                c.writeMsg(data)
+                data = c.getResponse()
+                with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
+                    f.write(data)
+                c.decryptFile(msg[4:])
+
             else:
                 c.writeMsg(c.encMsg(msg))
         # wait for response from server
-        msg = c.processResp(c.getResponse()).decode('utf-8')
+        if msg[:3] != 'dnl':
+            msg = c.processResp(c.getResponse()).decode('utf-8')
         # response = False
         # while (not response):
         #     msg = c.readMsg()

@@ -198,24 +198,26 @@ def main():
             msg = s.readMsg()
             if msg != '':
                 response = True
-                msg = s.processResp(msg).decode('utf-8')
+                msg = s.processResp(msg)
+                msg = msg.split(' '.encode('utf-8'))
+                cmd = msg[0].decode('utf-8')
+                if len(msg) > 1:
+                    args = msg[1:]
+                    name = args[0].decode('utf-8')
                 print("msg: %s" % msg)
-                cmd = msg[:3]
                 if cmd == "mkd":
-                    s.mkd(msg[4:])
+                    s.mkd(name)
                 elif cmd == "rmd":
-                    s.rmd(msg[4:])
+                    s.rmd(name)
                 elif cmd == "gwd":
                     s.gwd()
                 elif cmd == "cwd":
-                    s.cwd(msg[4:])
+                    s.cwd(name)
                 elif cmd == "lst":
                     s.lst()
                 elif cmd == "upl":
                     try:
-                        data = s.readMsg()
-                        fileName = msg[4:]
-                        s.upl(fileName, data)
+                        s.upl(name, args[1])
                     except:
                         s.writeMsg(s.encMsg("Error"))
                 else:
@@ -228,5 +230,6 @@ def main():
         # msg = 'Message received.'
         # s.writeMsg(msg)
         time.sleep(0.5)
+
 
 main()
