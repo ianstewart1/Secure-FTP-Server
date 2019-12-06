@@ -199,6 +199,8 @@ def main():
             elif msg[:3] == 'dnl':
                 c.writeMsg(c.encMsg(msg))
                 data = c.getResponse()
+                data = c.processResp(data)
+                print(data)
                 with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
                     f.write(data)
                 c.decryptFile(msg[4:])

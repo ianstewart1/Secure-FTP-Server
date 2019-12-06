@@ -223,6 +223,11 @@ def main():
                         s.upl(name, args[1])
                     except:
                         s.writeMsg(s.encMsg("Error"))
+                elif cmd == "dnl":
+                    try:
+                        s.dnl(name)
+                    except:
+                        s.writeMsg(s.encMsg("Error"))
                 else:
                     s.writeMsg(s.encMsg("invalid command"))
             time.sleep(0.5)
