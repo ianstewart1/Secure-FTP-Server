@@ -156,6 +156,10 @@ class Client:
             with open(self.clientAddress + '/IN/' + msgs[-1], 'rb') as m:
                 return m.read()
         return ''
+        
+    def clearMsgs(self):
+        for msg in os.listdir(self.clientAddress + '/IN'): os.remove(self.clientAddress + '/IN/' + msg)
+        for msg in os.listdir(self.clientAddress + '/OUT'): os.remove(self.clientAddress + '/OUT/' + msg)
 
     ### COMMANDS ###
 
@@ -171,6 +175,7 @@ class Client:
 
 def main():
     c = Client()
+    c.clearMsgs()
     c.loadRSAKeys()
     c.initializeSession()
     # set up session keys and establish secure connection here

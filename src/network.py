@@ -28,10 +28,6 @@ class Network:
             txt = m.read()
         with open(self.serverAddress + '/IN/' + msg, 'wb') as m:
             m.write(txt)
-        
-    def clearMsgs(self, address):
-        for msg in os.listdir(address + '/IN'): os.remove(address + '/IN/' + msg)
-        for msg in os.listdir(address + '/OUT'): os.remove(address + '/OUT/' + msg)
 
 
 def main():
@@ -39,9 +35,6 @@ def main():
     # make sure each party has the necessary directories at their addresses
     n.createDirectory(n.clientAddress)
     n.createDirectory(n.serverAddress)
-    # clear pre-existing messages out (fresh session!)
-    n.clearMsgs(n.clientAddress)
-    n.clearMsgs(n.serverAddress)
     # message counter (to check what has already been sent)
     clientC, serverC = 0, 0
     cycles = 0
@@ -50,11 +43,15 @@ def main():
         time.sleep(0.5)
         # client to server
         msgs = sorted(os.listdir(n.clientAddress + '/OUT'))
+        if len(msgs) == 0:
+            clientC = 0
         if clientC < len(msgs):
             n.transferToServer(msgs[-1])
             clientC += 1
         # server to client
         msgs = sorted(os.listdir(n.serverAddress + '/OUT'))
+        if len(msgs) == 0:
+            serverC = 0
         if serverC < len(msgs):
             n.transferToClient(msgs[-1])
             serverC += 1
