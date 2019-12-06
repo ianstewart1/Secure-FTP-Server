@@ -65,13 +65,16 @@ class Server:
         return False
 
     
-
-    def encMsg(self, message):
+    def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
 
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
-        cipher_text, tag = cipher_aes.encrypt_and_digest(message)
+        if(data != b''):
+            cipher_text, tag = cipher_aes.encrypt_and_digest(
+                message + " ".encode('utf-8') + data)
+        else:
+            cipher_text, tag = cipher_aes.encrypt_and_digest(message)
 
         return cipher_aes.nonce + tag + cipher_text
 
@@ -167,7 +170,7 @@ class Server:
         self.writeMsg(self.encMsg(dirList))
 
     def upl(self, fileName, data):
-        with open(self.getOsPath()+fileName, 'w+') as f:
+        with open(self.getOsPath()+fileName, 'wb') as f:
             f.write(data)
         self.writeMsg(self.encMsg("%s uploaded" %fileName))
 
