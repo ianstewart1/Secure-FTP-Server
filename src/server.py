@@ -67,7 +67,7 @@ class Server:
     
 
     def encMsg(self, message):
-        if(type(message) == type("")):
+        if isinstance(message, str):
             message = message.encode('utf-8')
 
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
@@ -113,6 +113,9 @@ class Server:
     def getOsPath(self):
         return self.serverAddress + '/USERS/' + self.currentUser + self.workingDir + "/"
 
+    def clearMsgs(self):
+        for msg in os.listdir(self.serverAddress + '/IN'): os.remove(self.serverAddress + '/IN/' + msg)
+        for msg in os.listdir(self.serverAddress + '/OUT'): os.remove(self.serverAddress + '/OUT/' + msg)
 
     ### COMMANDS ###
 
@@ -183,6 +186,7 @@ class Server:
 
 def main():
     s = Server()
+    s.clearMsgs()
     # set up session keys and establish secure connection here
     s.initSession()
     while True:

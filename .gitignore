@@ -3,3 +3,4 @@
 /client/OUT/*
 /client/IN/*
 /.vscode
+/server/USERS/*

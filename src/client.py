@@ -159,6 +159,10 @@ class Client:
             with open(self.clientAddress + '/IN/' + msgs[-1], 'rb') as m:
                 return m.read()
         return ''
+        
+    def clearMsgs(self):
+        for msg in os.listdir(self.clientAddress + '/IN'): os.remove(self.clientAddress + '/IN/' + msg)
+        for msg in os.listdir(self.clientAddress + '/OUT'): os.remove(self.clientAddress + '/OUT/' + msg)
 
     ### COMMANDS ###
 
@@ -174,6 +178,7 @@ class Client:
 
 def main():
     c = Client()
+    c.clearMsgs()
     c.loadRSAKeys()
     c.initializeSession()
     with open('test.txt', 'wb') as f:
@@ -192,12 +197,13 @@ def main():
             else:
                 c.writeMsg(c.encMsg(msg))
         # wait for response from server
-        response = False
-        while (not response):
-            msg = c.readMsg()
-            if msg != '':
-                response = True
-                msg = c.processResp(msg).decode('utf-8')
+        msg = c.processResp(c.getResponse()).decode('utf-8')
+        # response = False
+        # while (not response):
+        #     msg = c.readMsg()
+        #     if msg != '':
+        #         response = True
+        #         msg = c.processResp(msg).decode('utf-8')
         # print server response
         print(f'Server: {msg}')
         time.sleep(0.5)
