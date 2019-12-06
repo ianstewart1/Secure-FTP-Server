@@ -203,12 +203,16 @@ def main():
             if msg != '':
                 response = True
                 msg = s.processResp(msg)
+
+                # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
                 msg = msg.split(' '.encode('utf-8'), 2)
                 cmd = msg[0].decode('utf-8')
                 if len(msg) > 1:
                     args = msg[1:]
                     name = args[0].decode('utf-8')
                 print("msg: %s" % msg)
+
+                # 
                 if cmd == "mkd":
                     s.mkd(name)
                 elif cmd == "rmd":
