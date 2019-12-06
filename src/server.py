@@ -177,6 +177,7 @@ class Server:
     def rmf(self, fileName):
         if os.path.exists(self.getOsPath() + fileName):
             os.remove(self.getOsPath() + fileName)
+            self.writeMsg(self.encMsg("Removed"))
         else:
             print("The file does not exist")
 
@@ -197,12 +198,16 @@ def main():
             if msg != '':
                 response = True
                 msg = s.processResp(msg)
-                msg = msg.split(' '.encode('utf-8'))
+
+                # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
+                msg = msg.split(' '.encode('utf-8'), 2)
                 cmd = msg[0].decode('utf-8')
                 if len(msg) > 1:
                     args = msg[1:]
                     name = args[0].decode('utf-8')
                 print("msg: %s" % msg)
+
+                # 
                 if cmd == "mkd":
                     s.mkd(name)
                 elif cmd == "rmd":
@@ -215,6 +220,8 @@ def main():
                     s.lst()
                 elif cmd == "upl":
                     try:
+                        print(name)
+                        print(b''.join(args[1:]))
                         s.upl(name, args[1])
                     except:
                         s.writeMsg(s.encMsg("Error"))
@@ -223,6 +230,8 @@ def main():
                         s.dnl(name)
                     except:
                         s.writeMsg(s.encMsg("Error"))
+                elif cmd == "rmf":
+                    s.rmf(name)
                 else:
                     s.writeMsg(s.encMsg("invalid command"))
             time.sleep(0.5)
