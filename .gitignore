@@ -1,10 +1,5 @@
-/server/OUT/*
-/server/IN/*
-/client/OUT/*
-/client/IN/*
+/network/*
 /.vscode
 /server/USERS/*
 .DS_Store
-client/test.txt
 client/*
-src/test.txt

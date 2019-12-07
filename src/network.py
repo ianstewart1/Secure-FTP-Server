@@ -5,6 +5,7 @@ import getopt
 import time
 
 class Network:
+
     def __init__(self, netAddress=os.getcwd()):
         if 'src' in netAddress:
             netAddress = netAddress.split('src')[0] + 'network'
@@ -18,9 +19,16 @@ class Network:
                 self.lastRead[d] = -1
                 self.addressList.append(d)
 
+    def clearDir(self):
+        for addr in os.listdir(self.networkAddress):
+            for msg in os.listdir(self.networkAddress + '/' + addr + '/IN'): os.remove(self.networkAddress + '/' + addr + '/IN/' + msg)
+            for msg in os.listdir(self.networkAddress + '/' + addr + '/OUT'): os.remove(self.networkAddress + '/' + addr + '/OUT/' + msg)
+
     def readMsg(self, src):
         msgs = sorted(os.listdir(self.networkAddress + '/' + src + '/OUT'))
-        if len(msgs) - 1 > self.lastRead[src]:
+        if len(msgs) <= self.lastRead[src]:
+            self.lastRead[src] = -1
+        elif len(msgs) - 1 > self.lastRead[src]:
             dst = msgs[-1].split('--')[1]
             if dst not in self.addressList:
                 os.remove(self.networkAddress + '/' + src + '/OUT/' + msgs[-1])
@@ -43,6 +51,7 @@ class Network:
 
 def main():
     n = Network()
+    n.clearDir()
     cycles = 0
     while True:
         print('Running' + '.'*(cycles%4) + ' '*4, end='\r')

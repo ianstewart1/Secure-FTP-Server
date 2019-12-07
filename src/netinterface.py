@@ -8,16 +8,17 @@ class network_interface:
 	
     def __init__(self, path, addr):
         self.net_path = path
-        self.own_addr = addr
+        self.own_addr = '/' + addr
         
         addr_dir = self.net_path + self.own_addr
         if not os.path.exists(addr_dir):
             os.mkdir(addr_dir)
             os.mkdir(addr_dir + '/IN')
             os.mkdir(addr_dir + '/OUT')
-
-        for msg in os.listdir(addr_dir + '/IN'): os.remove(addr_dir + '/IN/' + msg)
-        for msg in os.listdir(addr_dir + '/OUT'): os.remove(addr_dir + '/OUT/' + msg)
+        for msg in os.listdir(addr_dir + '/IN'):
+            os.remove(addr_dir + '/IN/' + msg)
+        for msg in os.listdir(addr_dir + '/OUT'):
+            os.remove(addr_dir + '/OUT/' + msg)
 	
     def send_msg(self, dst, msg):
 

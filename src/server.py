@@ -5,13 +5,14 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import SHA256
+from netinterface import network_interface
 
 
 class Server:
 
     ## INITIALIZATION
     
-    def __init__(self, server=os.getcwd()):
+    def __init__(self, server=os.getcwd(), network=os.getcwd()):
         if 'src' in server:
             server = server.split('src')[0] + 'server'
         self.serverAddress = server
@@ -22,11 +23,17 @@ class Server:
         self.lastMsg = 0
         self.msgNonce = None
         self.AESKey = None
+        # network connection
+        if 'src' in network:
+            network = network.split('src')[0] + 'network'
+        self.networkPath = network
+        self.networkRef = None
 
     def initSession(self):
         self.loadRSAKeys()
+        self.networkRef = network_interface(self.networkPath, 'server')
         # wait for client message
-        resp = self.getResponse()
+        resp = self.readMsg()
 
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
         sizeOfKey = self.serverRSApublic.size_in_bytes()
@@ -92,37 +99,14 @@ class Server:
             print('MAC verification failed, ending session...')
             exit(1)
 
-    def getResponse(self):
-        response = False
-        while (not response):
-            resp = self.readMsg()
-            if resp != '':
-                response = True
-        return resp
-
     def writeMsg(self, msg):
-        msgs = sorted(os.listdir(self.serverAddress + '/OUT/'))
-        if len(msgs) > 0:
-            nextMsg = (int.from_bytes(bytes.fromhex(msgs[-1]), 'big') + 1).to_bytes(2, 'big').hex()
-        else:
-            nextMsg = '0000'
-        with open(self.serverAddress + '/OUT/' + nextMsg, 'wb') as m:
-            m.write(msg)
+        self.networkRef.send_msg(self.currentUser, msg)
 
     def readMsg(self):
-        msgs = sorted(os.listdir(self.serverAddress + '/IN'))
-        if len(msgs) > self.lastMsg:
-            self.lastMsg += 1
-            with open(self.serverAddress + '/IN/' + msgs[-1], 'rb') as m:
-                return m.read()
-        return ''
+        return self.networkRef.receive_msg()
 
     def getOsPath(self):
         return self.serverAddress + '/USERS/' + self.currentUser + self.workingDir + "/"
-
-    def clearMsgs(self):
-        for msg in os.listdir(self.serverAddress + '/IN'): os.remove(self.serverAddress + '/IN/' + msg)
-        for msg in os.listdir(self.serverAddress + '/OUT'): os.remove(self.serverAddress + '/OUT/' + msg)
 
     def incNonce(self):
         self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
@@ -199,59 +183,45 @@ class Server:
 
 def main():
     s = Server()
-    s.clearMsgs()
     # set up session keys and establish secure connection here
     s.initSession()
     while True:
-        # wait for message from client, eventually going to need command parsing (yuck!)
-        response = False
-        cycles = 0
-        while (not response):
-            print('Waiting' + '.'*(cycles%4) + ' '*4, end='\r')
-            msg = s.readMsg()
-            if msg != '':
-                response = True
-                msg = s.processResp(msg)
-                # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
-                msg = msg.split(' '.encode('utf-8'), 2)
-                cmd = msg[0].decode('utf-8').lower()
-                if len(msg) > 1:
-                    args = msg[1:]
-                    name = args[0].decode('utf-8')
-                # print("msg: %s" % msg)
-                if cmd == "mkd":
-                    s.mkd(name)
-                elif cmd == "rmd":
-                    s.rmd(name)
-                elif cmd == "gwd":
-                    s.gwd()
-                elif cmd == "cwd":
-                    s.cwd(name)
-                elif cmd == "lst":
-                    s.lst()
-                elif cmd == "upl":
-                    try:
-                        # print(name)
-                        # print(b''.join(args[1:]))
-                        s.upl(name, args[1])
-                    except:
-                        s.writeMsg(s.encMsg("Error"))
-                elif cmd == "dnl":
-                    try:
-                        s.dnl(name)
-                    except:
-                        s.writeMsg(s.encMsg("Error"))
-                elif cmd == "rmf":
-                    s.rmf(name)
-                else:
-                    s.writeMsg(s.encMsg("Invalid command"))
-            time.sleep(0.5)
-            cycles += 1
-        # print client message (for debugging)
+        # wait for message from client
+        msg = s.readMsg()
+        msg = s.processResp(msg)
+        # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
+        msg = msg.split(' '.encode('utf-8'), 2)
+        cmd = msg[0].decode('utf-8').lower()
+        if len(msg) > 1:
+            args = msg[1:]
+            name = args[0].decode('utf-8')
+        if cmd == "mkd":
+            s.mkd(name)
+        elif cmd == "rmd":
+            s.rmd(name)
+        elif cmd == "gwd":
+            s.gwd()
+        elif cmd == "cwd":
+            s.cwd(name)
+        elif cmd == "lst":
+            s.lst()
+        elif cmd == "upl":
+            try:
+                s.upl(name, args[1])
+            except:
+                s.writeMsg(s.encMsg("Error"))
+        elif cmd == "dnl":
+            try:
+                s.dnl(name)
+            except:
+                s.writeMsg(s.encMsg("Error"))
+        elif cmd == "rmf":
+            s.rmf(name)
+        else:
+            s.writeMsg(s.encMsg("Invalid command"))
+        time.sleep(0.5)
+        # print client message
         print(f"Client command: {msg}{' '*20}")
-        # send response to client (this will be other stuff eventually)
-        # msg = 'Message received.'
-        # s.writeMsg(msg)
         time.sleep(0.5)
 
 

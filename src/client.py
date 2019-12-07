@@ -7,11 +7,12 @@ from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Util.Padding import pad, unpad
+from netinterface import network_interface
 
 
 class Client:
 
-    def __init__(self, client=os.getcwd()):
+    def __init__(self, client=os.getcwd(), network=os.getcwd()):
         if 'src' in client:
             client = client.split('src')[0] + 'client'
         self.clientAddress = client
@@ -24,10 +25,18 @@ class Client:
         # user params
         self.username = None
         self.password = None
+        # network connection
+        if 'src' in network:
+            network = network.split('src')[0] + 'network'
+        self.networkPath = network
+        self.networkRef = None
 
     def initializeSession(self):
         print('Establishing session...')
         self.login()
+        # initialize network connection
+        self.networkRef = network_interface(self.networkPath, self.username)
+        time.sleep(1) # <-- I don't like this
 
         self.AESKey = get_random_bytes(16)
 
@@ -49,7 +58,7 @@ class Client:
         self.writeMsg(enc_session_key + randomBytes + messageContent)
 
         # Receive and Process Server Response
-        resp = self.processResp(self.getResponse())
+        resp = self.processResp(self.readMsg())
 
         # Check if the server is logging in the right person
         if resp.decode('utf-8') != self.username:
@@ -87,15 +96,6 @@ class Client:
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
-    def getResponse(self):
-        """Awaits a response from the server. Returns content when one is detected"""
-        response = False
-        while (not response):
-            resp = self.readMsg()
-            if resp != '':
-                response = True
-        return resp
-
     def login(self):
         # called at the start of a session
         userN = ''
@@ -113,13 +113,11 @@ class Client:
         
         salt = get_random_bytes(16)
         keyKey = scrypt(self.password.encode('utf-8'), salt, 16, N=2**14, r=8, p=1)
-        print(keyKey)
         session_key = get_random_bytes(16)
         # Encrypt the file key
         cipher_aes = AES.new(keyKey, AES.MODE_GCM)
         enc_session_key, keyTag = cipher_aes.encrypt_and_digest(session_key)
         keyNonce = cipher_aes.nonce
-        print(enc_session_key)
 
         # Encrypt the data with the AES file key
         cipher_aes = AES.new(session_key, AES.MODE_GCM)
@@ -143,14 +141,9 @@ class Client:
 
         keyKey = scrypt(self.password.encode('utf-8'),
                         salt, 16, N=2**14, r=8, p=1)
-        print(keyKey)
         # Decrypt the session key with the public RSA key
         cipher_aes = AES.new(keyKey, AES.MODE_GCM, keyNonce)
         session_key = cipher_aes.decrypt_and_verify(enc_session_key, keyTag)
-
-        # # Decrypt the session key with the private RSA key
-        # cipher_rsa = PKCS1_OAEP.new(self.clientRSAprivate)
-        # session_key = cipher_rsa.decrypt(enc_session_key)
 
         # Decrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
@@ -159,26 +152,10 @@ class Client:
             f.write(data)
 
     def writeMsg(self, msg):
-        msgs = sorted(os.listdir(self.clientAddress + '/OUT/'))
-        if len(msgs) > 0:
-            nextMsg = (int.from_bytes(bytes.fromhex(
-                msgs[-1]), 'big') + 1).to_bytes(2, 'big').hex()
-        else:
-            nextMsg = '0000'
-        with open(self.clientAddress + '/OUT/' + nextMsg, 'wb') as m:
-            m.write(msg)
+        self.networkRef.send_msg('server', msg)
 
     def readMsg(self):
-        msgs = sorted(os.listdir(self.clientAddress + '/IN'))
-        if len(msgs) > self.lastMsg:
-            self.lastMsg += 1
-            with open(self.clientAddress + '/IN/' + msgs[-1], 'rb') as m:
-                return m.read()
-        return ''
-        
-    def clearMsgs(self):
-        for msg in os.listdir(self.clientAddress + '/IN'): os.remove(self.clientAddress + '/IN/' + msg)
-        for msg in os.listdir(self.clientAddress + '/OUT'): os.remove(self.clientAddress + '/OUT/' + msg)
+        return self.networkRef.receive_msg()
 
     def incNonce(self):
         self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
@@ -198,7 +175,6 @@ class Client:
 def main():
     # TODO: add getopt to specify client folder destination
     c = Client()
-    c.clearMsgs()
     c.loadRSAKeys()
     c.initializeSession()
     # set up session keys and establish secure connection here
@@ -212,7 +188,7 @@ def main():
                 c.writeMsg(c.encMsg(msg, data))
             elif msg[:3] == 'dnl':
                 c.writeMsg(c.encMsg(msg))
-                data = c.processResp(c.getResponse())
+                data = c.processResp(c.readMsg())
                 with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
                     f.write(data)
                 c.decryptFile(msg[4:])
@@ -222,7 +198,7 @@ def main():
         if msg[:3] == 'dnl':
             msg = msg[4:] + ' downloaded'
         else:
-            msg = c.processResp(c.getResponse()).decode('utf-8')
+            msg = c.processResp(c.readMsg()).decode('utf-8')
         # print server response
         print(msg)
         time.sleep(0.5)
