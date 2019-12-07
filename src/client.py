@@ -2,6 +2,7 @@ import os
 import getopt
 import getpass
 import time
+import sys
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
@@ -51,9 +52,9 @@ class Client:
         # Receive and Process Server Response
         resp = self.processResp(self.getResponse())
 
-        # Check if the server is logging in the right person
+        # Check if the server recieved and properly decoded the message
         if resp.decode('utf-8') != self.username:
-            print('Username from server did not match, quitting')
+            print('Communication error, quitting')
             exit(1)
         print('Session established')
 
@@ -112,14 +113,12 @@ class Client:
             data = f.read()
         
         salt = get_random_bytes(16)
-        keyKey = scrypt(self.password.encode('utf-8'), salt, 16, N=2**14, r=8, p=1)
-        print(keyKey)
+        keyKey = scrypt(self.password.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
         session_key = get_random_bytes(16)
         # Encrypt the file key
         cipher_aes = AES.new(keyKey, AES.MODE_GCM)
         enc_session_key, keyTag = cipher_aes.encrypt_and_digest(session_key)
         keyNonce = cipher_aes.nonce
-        print(enc_session_key)
 
         # Encrypt the data with the AES file key
         cipher_aes = AES.new(session_key, AES.MODE_GCM)
@@ -132,18 +131,25 @@ class Client:
                  for x in (salt, keyTag, keyNonce, enc_session_key, cipher_aes.nonce, tag, ciphertext)]
         return salt + keyTag + keyNonce + enc_session_key + cipher_aes.nonce + tag + ciphertext
 
-    def decryptFile(self, path):
+    def decryptFile(self, path, data=None):
         # TODO: Re-write to take in byte string rather than opening a file that has just been written
         path = self.clientAddress + '/' + path
-        file_in = open(path, 'rb')
-        salt, keyTag, keyNonce, enc_session_key, nonce, tag, ciphertext = \
-            [file_in.read(x)
-             for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
-        file_in.close()
+
+        # Decrypt a give file
+        if data == None:
+            file_in = open(path, 'rb')
+            salt, keyTag, keyNonce, enc_session_key, nonce, tag, ciphertext = \
+                [file_in.read(x)
+                for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
+            file_in.close()
+        # Decrypt payload into a file
+        else:
+            salt, keyTag, keyNonce, enc_session_key, nonce, tag = \
+                [data[x:x+16] for x in (0, 16, 32, 48, 64, 80)]
+            ciphertext = data[96:]
 
         keyKey = scrypt(self.password.encode('utf-8'),
-                        salt, 16, N=2**14, r=8, p=1)
-        print(keyKey)
+                        salt, 16, N=2**20, r=8, p=1)
         # Decrypt the session key with the public RSA key
         cipher_aes = AES.new(keyKey, AES.MODE_GCM, keyNonce)
         session_key = cipher_aes.decrypt_and_verify(enc_session_key, keyTag)
@@ -197,35 +203,42 @@ class Client:
 
 def main():
     # TODO: add getopt to specify client folder destination
-    c = Client()
-    c.clearMsgs()
-    c.loadRSAKeys()
-    c.initializeSession()
-    # set up session keys and establish secure connection here
-    while True:
-        # send message to server
-        msg = ''
-        while msg == '':
-            msg = input('Command: ')
-            if msg[:3] == 'upl':
-                data = c.encryptFile(msg[4:])
-                c.writeMsg(c.encMsg(msg, data))
-            elif msg[:3] == 'dnl':
-                c.writeMsg(c.encMsg(msg))
-                data = c.processResp(c.getResponse())
-                with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
-                    f.write(data)
-                c.decryptFile(msg[4:])
+    try:
+        c = Client()
+        c.clearMsgs()
+        c.loadRSAKeys()
+        c.initializeSession()
+        # set up session keys and establish secure connection here
+        while True:
+            # send message to server
+            msg = ''
+            while msg == '':
+                msg = input('Command: ')
+                if msg[:3] == 'upl':
+                    data = c.encryptFile(msg[4:])
+                    c.writeMsg(c.encMsg(msg, data))
+                elif msg[:3] == 'dnl':
+                    c.writeMsg(c.encMsg(msg))
+                    data = c.processResp(c.getResponse())
+                    # with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
+                    #     f.write(data)
+                    #      
+                    c.decryptFile(msg[4:], data)
+                else:
+                    c.writeMsg(c.encMsg(msg))
+            # wait for response from server
+            if msg[:3] == 'dnl':
+                msg = msg[4:] + ' downloaded'
             else:
-                c.writeMsg(c.encMsg(msg))
-        # wait for response from server
-        if msg[:3] == 'dnl':
-            msg = msg[4:] + ' downloaded'
-        else:
-            msg = c.processResp(c.getResponse()).decode('utf-8')
-        # print server response
-        print(msg)
-        time.sleep(0.5)
+                msg = c.processResp(c.getResponse()).decode('utf-8')
+            # print server response
+            print(msg)
+            time.sleep(0.5)
+        c.clearMsgs()
+    except KeyboardInterrupt:
+        c.clearMsgs()
+        print("bye bye")
+        sys.exit(0)
 
 
 main()
