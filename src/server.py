@@ -225,8 +225,6 @@ def main():
                     s.lst()
                 elif cmd == "upl":
                     try:
-                        print(name)
-                        print(b''.join(args[1:]))
                         s.upl(name, args[1])
                     except:
                         s.writeMsg(s.encMsg("Error"))

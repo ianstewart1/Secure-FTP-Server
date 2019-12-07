@@ -200,7 +200,6 @@ def main():
                 c.writeMsg(c.encMsg(msg))
                 data = c.getResponse()
                 data = c.processResp(data)
-                print(data)
                 with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
                     f.write(data)
                 c.decryptFile(msg[4:])
@@ -210,59 +209,8 @@ def main():
         # wait for response from server
         if msg[:3] != 'dnl':
             msg = c.processResp(c.getResponse()).decode('utf-8')
-        # response = False
-        # while (not response):
-        #     msg = c.readMsg()
-        #     if msg != '':
-        #         response = True
-        #         msg = c.processResp(msg).decode('utf-8')
-        # print server response
+        
         print(f'Server: {msg}')
         time.sleep(0.5)
 
-
 main()
-
-
-
-
-# def initSession(self):
-#     print('Establishing session...')
-#     self.loadRSAKeys()
-#     # client generate master key
-#     self.initialCheck()
-#     # use key derivation protocol scrypt to get unique MAC (HMAC/SHA256) and ENC keys for an AES cipher(CBC)
-#     self.createKeys(self.AESKey)
-#     self.login()
-#     print('Session established')
-
-# def createKeys(self, masterKey, iv):
-#     # set client variables
-#     AEScipher = AES.new(masterKey, AES.MODE_GCM)
-
-#     msg = AEScipher.encrypt(pad(keys[0] + keys[1], AES.block_size))
-#     self.writeMsg(msg)
-#     # wait for server response
-#     resp = self.getResponse()
-#     # decrypt server response and check MAC/AES key values
-#     AEScipher = AES.new(masterKey, AES.MODE_CBC, iv)
-#     resp = unpad(AEScipher.decrypt(resp), AES.block_size)
-#     if (resp[:32] != self.MACKey or resp[32:] != self.AESKey):
-#         print('Response MAC or AES key does not match. Ending session setup...')
-#         exit(1)
-
-# def initialCheck(self):
-#     masterKey = get_random_bytes(32)
-#     encryptRSAcipher = PKCS1_OAEP.new(self.serverRSApublic)
-#     # send master key to server encrypted with server public key
-#     msg = encryptRSAcipher.encrypt(masterKey)
-#     self.writeMsg(msg)
-#     # wait for server response
-#     resp = self.getResponse()
-#     # decrypt response from server
-#     AEScipher = AES.new(masterKey, AES.MODE_GCM)
-#     resp = AEScipher.decrypt(resp), AES.block_size
-#     if (resp != masterKey):
-#         print('Response master key does not match. Ending session setup...')
-#         exit(1)
-#     return masterKey, iv
