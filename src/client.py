@@ -15,8 +15,6 @@ class Client:
         if 'src' in client:
             client = client.split('src')[0] + 'client'
         self.clientAddress = client
-        self.clientRSAprivate = self.clientAddress + '/clientRSAprivate.pem'
-        self.clientRSApublic = self.clientAddress + '/clientRSApublic.pem'
         self.serverRSApublic = self.clientAddress + '/serverRSApublic.pem'
         # used for keeping track of new messages
         self.lastMsg = 0
@@ -86,10 +84,6 @@ class Client:
             exit(1)
 
     def loadRSAKeys(self):
-        with open(self.clientRSAprivate, 'rb') as f:
-            self.clientRSAprivate = RSA.import_key(f.read())
-        with open(self.clientRSApublic, 'rb') as f:
-            self.clientRSApublic = RSA.import_key(f.read())
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
