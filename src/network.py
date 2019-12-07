@@ -5,56 +5,53 @@ import getopt
 import time
 
 class Network:
-    def __init__(self, client=os.getcwd(), server=os.getcwd()):
-        self.clientAddress = client.split('src')[0] + 'client'
-        self.serverAddress = server.split('src')[0] + 'server'
+    def __init__(self, netAddress=os.getcwd()):
+        if 'src' in netAddress:
+            netAddress = netAddress.split('src')[0] + 'network'
+        self.networkAddress = netAddress
+        self.addressList = []
+        self.lastRead = {}
 
-    def createDirectory(self, addrDir):
-        if not os.path.exists(addrDir):
-            os.mkdir(addrDir)
-        if not os.path.exists(addrDir + '/IN'):
-            os.mkdir(addrDir + '/IN')
-        if not os.path.exists(addrDir + '/OUT'):
-            os.mkdir(addrDir + '/OUT')
+    def getAddresses(self):
+        for d in os.listdir(self.networkAddress):
+            if d not in self.addressList:
+                self.lastRead[d] = -1
+                self.addressList.append(d)
 
-    def transferToClient(self, msg):
-        with open(self.serverAddress + '/OUT/' + msg, 'rb') as m:
-            txt = m.read()
-        with open(self.clientAddress + '/IN/' + msg, 'wb') as m:
-            m.write(txt)
+    def readMsg(self, src):
+        msgs = sorted(os.listdir(self.networkAddress + '/' + src + '/OUT'))
+        if len(msgs) - 1 > self.lastRead[src]:
+            dst = msgs[-1].split('--')[1]
+            if dst not in self.addressList:
+                os.remove(self.networkAddress + '/' + src + '/OUT/' + msgs[-1])
+            else:
+                with open(self.networkAddress + '/' + src + '/OUT/' + msgs[-1], 'rb') as f:
+                    msg = f.read()
+                self.lastRead[src] += 1
+                return dst, msg
+        return '', ''
 
-    def transferToServer(self, msg):
-        with open(self.clientAddress + '/OUT/' + msg, 'rb') as m:
-            txt = m.read()
-        with open(self.serverAddress + '/IN/' + msg, 'wb') as m:
-            m.write(txt)
+    def writeMsg(self, dst, msg):
+        msgs = sorted(os.listdir(self.networkAddress + '/' + dst + '/IN'))
+        if len(msgs) > 0:
+            next_msg = (int.from_bytes(bytes.fromhex(msgs[-1]), byteorder='big') + 1).to_bytes(2, byteorder='big').hex()
+        else:
+            next_msg = '0000'
+        with open(self.networkAddress + '/' + dst + '/IN/' + next_msg, 'wb') as f:
+            f.write(msg)
 
 
 def main():
     n = Network()
-    # make sure each party has the necessary directories at their addresses
-    n.createDirectory(n.clientAddress)
-    n.createDirectory(n.serverAddress)
-    # message counter (to check what has already been sent)
-    clientC, serverC = 0, 0
     cycles = 0
     while True:
         print('Running' + '.'*(cycles%4) + ' '*4, end='\r')
         time.sleep(0.5)
-        # client to server
-        msgs = sorted(os.listdir(n.clientAddress + '/OUT'))
-        if len(msgs) == 0:
-            clientC = 0
-        if clientC < len(msgs):
-            n.transferToServer(msgs[-1])
-            clientC += 1
-        # server to client
-        msgs = sorted(os.listdir(n.serverAddress + '/OUT'))
-        if len(msgs) == 0:
-            serverC = 0
-        if serverC < len(msgs):
-            n.transferToClient(msgs[-1])
-            serverC += 1
+        n.getAddresses()
+        for addr in n.addressList:
+            dst, msg = n.readMsg(addr)
+            if (dst != '' and msg != ''):
+                n.writeMsg(dst, msg)
         cycles += 1
 
 main()
