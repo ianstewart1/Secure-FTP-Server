@@ -160,7 +160,6 @@ class Server:
     def cwd(self, newDir):
         dirs = newDir.split("/")
         for nd in dirs:
-            print(nd)
             if (nd == ".."):
                 if(self.workingDir == '/root'):
                     self.writeMsg(self.encMsg(
