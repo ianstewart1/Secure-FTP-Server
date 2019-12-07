@@ -1,5 +1,4 @@
 import os
-import sys
 import getopt
 import time
 from Crypto.Cipher import AES, PKCS1_OAEP
@@ -48,7 +47,6 @@ class Server:
 
         # Create response if login was successful
         serverResponse = self.encMsg(self.currentUser)
-        
         self.writeMsg(serverResponse)
 
     def loadRSAKeys(self):
@@ -64,27 +62,22 @@ class Server:
                     return True
         return False
 
-    
     def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
-
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
         if(data != b''):
             cipher_text, tag = cipher_aes.encrypt_and_digest(
                 message + " ".encode('utf-8') + data)
         else:
             cipher_text, tag = cipher_aes.encrypt_and_digest(message)
-
         return cipher_aes.nonce + tag + cipher_text
 
     def processResp(self, resp):
         nonce = resp[:16]
         tag = resp[16:32]
         ciphertext = resp[32:]
-
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
-
         return cipher_aes.decrypt_and_verify(ciphertext, tag)
 
     def getResponse(self):
@@ -131,9 +124,6 @@ class Server:
     # • DNL – downloading a file from the server
     # • RMF – removing a file from a folder on the server
 
-
-
-
     def mkd(self, folderName):
         # makes the directory from the working directory
         try: 
@@ -165,6 +155,7 @@ class Server:
         self.writeMsg(self.encMsg("Working directory is now: %s" %self.workingDir))
     
     def lst(self):
+        # TODO: perhaps return a value if there is nothing in the folder?
         dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
                                      self.currentUser + self.workingDir))
         self.writeMsg(self.encMsg(dirList))
@@ -203,16 +194,14 @@ def main():
             if msg != '':
                 response = True
                 msg = s.processResp(msg)
-
                 # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
                 msg = msg.split(' '.encode('utf-8'), 2)
                 cmd = msg[0].decode('utf-8')
                 if len(msg) > 1:
                     args = msg[1:]
                     name = args[0].decode('utf-8')
-                print("msg: %s" % msg)
-
-                # 
+                # print("msg: %s" % msg)
+                # TODO: maybe make these case insensitive? LST doesn't currently count as lst
                 if cmd == "mkd":
                     s.mkd(name)
                 elif cmd == "rmd":
@@ -225,6 +214,8 @@ def main():
                     s.lst()
                 elif cmd == "upl":
                     try:
+                        # print(name)
+                        # print(b''.join(args[1:]))
                         s.upl(name, args[1])
                     except:
                         s.writeMsg(s.encMsg("Error"))
@@ -236,7 +227,7 @@ def main():
                 elif cmd == "rmf":
                     s.rmf(name)
                 else:
-                    s.writeMsg(s.encMsg("invalid command"))
+                    s.writeMsg(s.encMsg("Invalid command"))
             time.sleep(0.5)
             cycles += 1
         # print client message (for debugging)

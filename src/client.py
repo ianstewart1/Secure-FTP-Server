@@ -11,6 +11,7 @@ from Crypto.Hash import HMAC, SHA256
 
 
 class Client:
+
     def __init__(self, client=os.getcwd()):
         if 'src' in client:
             client = client.split('src')[0] + 'client'
@@ -57,13 +58,11 @@ class Client:
     def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
-
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
         if(data!=b''):
             cipher_text, tag = cipher_aes.encrypt_and_digest(message + " ".encode('utf-8') + data)
         else:
             cipher_text, tag = cipher_aes.encrypt_and_digest(message)
-
         return cipher_aes.nonce + tag + cipher_text
 
     def processResp(self, resp):
@@ -73,9 +72,7 @@ class Client:
         nonce = resp[:16]
         tag = resp[16:32]
         ciphertext = resp[32:]
-
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
-
         return cipher_aes.decrypt_and_verify(ciphertext, tag)
 
     def loadRSAKeys(self):
@@ -125,7 +122,6 @@ class Client:
             with open(self.clientAddress + '/' + file_out, 'wb') as f:
                 [f.write(x)
                 for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
-        
         return enc_session_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, file):
@@ -181,6 +177,7 @@ class Client:
 
 
 def main():
+    # TODO: add getopt to specify client folder destination
     c = Client()
     c.clearMsgs()
     c.loadRSAKeys()
@@ -192,7 +189,7 @@ def main():
         # send message to server
         msg = ''
         while msg == '':
-            msg = input('Msg: ')
+            msg = input('Command: ')
             if msg[:3] == 'upl':
                 data = c.encryptFile(msg[4:])
                 c.writeMsg(c.encMsg(msg, data))
@@ -203,14 +200,15 @@ def main():
                 with open(c.clientAddress + '/' + msg[4:], 'wb') as f:
                     f.write(data)
                 c.decryptFile(msg[4:])
-
             else:
                 c.writeMsg(c.encMsg(msg))
         # wait for response from server
         if msg[:3] != 'dnl':
+            # TODO: Set custom downloaded message here
             msg = c.processResp(c.getResponse()).decode('utf-8')
-        
-        print(f'Server: {msg}')
+        # print server response
+        print(msg)
         time.sleep(0.5)
+
 
 main()
