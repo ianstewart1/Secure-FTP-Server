@@ -4,3 +4,7 @@
 /client/IN/*
 /.vscode
 /server/USERS/*
+.DS_Store
+client/test.txt
+client/*
+src/test.txt

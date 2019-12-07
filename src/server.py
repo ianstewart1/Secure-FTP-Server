@@ -158,14 +158,18 @@ class Server:
         self.writeMsg(self.encMsg("Working directory is: " + self.workingDir))
     
     def cwd(self, newDir):
-        if (newDir == ".."):
-            if(self.workingDir == '/root'):
-                pass
-            else:
-                self.workingDir = "/".join(self.workingDir.split("/")[:-1])
-        elif (newDir != ".."):
-            if(os.path.exists( self.getOsPath() + newDir)):
-                self.workingDir = self.workingDir+"/"+newDir
+        dirs = newDir.split("/")
+        for nd in dirs:
+            if (nd == ".."):
+                if(self.workingDir == '/root'):
+                    self.writeMsg(self.encMsg(
+                        "Working directory is now: %s" % self.workingDir))
+                    return
+                else:
+                    self.workingDir = "/".join(self.workingDir.split("/")[:-1])
+            elif (nd != ".."):
+                if(os.path.exists( self.getOsPath() + newDir)):
+                    self.workingDir = self.workingDir+"/"+newDir
         self.writeMsg(self.encMsg("Working directory is now: %s" %self.workingDir))
     
     def lst(self):

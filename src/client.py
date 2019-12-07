@@ -15,8 +15,6 @@ class Client:
         if 'src' in client:
             client = client.split('src')[0] + 'client'
         self.clientAddress = client
-        self.clientRSAprivate = self.clientAddress + '/clientRSAprivate.pem'
-        self.clientRSApublic = self.clientAddress + '/clientRSApublic.pem'
         self.serverRSApublic = self.clientAddress + '/serverRSApublic.pem'
         # used for keeping track of new messages
         self.lastMsg = 0
@@ -86,10 +84,6 @@ class Client:
             exit(1)
 
     def loadRSAKeys(self):
-        with open(self.clientRSAprivate, 'rb') as f:
-            self.clientRSAprivate = RSA.import_key(f.read())
-        with open(self.clientRSApublic, 'rb') as f:
-            self.clientRSApublic = RSA.import_key(f.read())
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
@@ -116,13 +110,18 @@ class Client:
         # because server should not have plaintext
         with open(self.clientAddress + '/' + file_in, 'rb') as f:
             data = f.read()
-
+        
+        salt = get_random_bytes(16)
+        keyKey = scrypt(self.password.encode('utf-8'), salt, 16, N=2**14, r=8, p=1)
+        print(keyKey)
         session_key = get_random_bytes(16)
-        # Encrypt the session key with the public RSA key
-        cipher_rsa = PKCS1_OAEP.new(self.clientRSApublic)
-        enc_session_key = cipher_rsa.encrypt(session_key)
+        # Encrypt the file key
+        cipher_aes = AES.new(keyKey, AES.MODE_GCM)
+        enc_session_key, keyTag = cipher_aes.encrypt_and_digest(session_key)
+        keyNonce = cipher_aes.nonce
+        print(enc_session_key)
 
-        # Encrypt the data with the AES session key
+        # Encrypt the data with the AES file key
         cipher_aes = AES.new(session_key, AES.MODE_GCM)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
 
@@ -130,21 +129,28 @@ class Client:
         if file_out != '':
             with open(self.clientAddress + '/' + file_out, 'wb') as f:
                 [f.write(x)
-                for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext)]
-        return enc_session_key + cipher_aes.nonce + tag + ciphertext
+                 for x in (salt, keyTag, keyNonce, enc_session_key, cipher_aes.nonce, tag, ciphertext)]
+        return salt + keyTag + keyNonce + enc_session_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, path):
         # TODO: Re-write to take in byte string rather than opening a file that has just been written
         path = self.clientAddress + '/' + path
         file_in = open(path, 'rb')
-        enc_session_key, nonce, tag, ciphertext = \
+        salt, keyTag, keyNonce, enc_session_key, nonce, tag, ciphertext = \
             [file_in.read(x)
-             for x in (self.clientRSAprivate.size_in_bytes(), 16, 16, -1)]
+             for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
         file_in.close()
 
-        # Decrypt the session key with the private RSA key
-        cipher_rsa = PKCS1_OAEP.new(self.clientRSAprivate)
-        session_key = cipher_rsa.decrypt(enc_session_key)
+        keyKey = scrypt(self.password.encode('utf-8'),
+                        salt, 16, N=2**14, r=8, p=1)
+        print(keyKey)
+        # Decrypt the session key with the public RSA key
+        cipher_aes = AES.new(keyKey, AES.MODE_GCM, keyNonce)
+        session_key = cipher_aes.decrypt_and_verify(enc_session_key, keyTag)
+
+        # # Decrypt the session key with the private RSA key
+        # cipher_rsa = PKCS1_OAEP.new(self.clientRSAprivate)
+        # session_key = cipher_rsa.decrypt(enc_session_key)
 
         # Decrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
