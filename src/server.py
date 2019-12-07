@@ -4,6 +4,7 @@ import time
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Hash import SHA256
 
 
 class Server:
@@ -19,6 +20,7 @@ class Server:
         self.workingDir = None
         self.currentUser = None
         self.lastMsg = 0
+        self.msgNonce = None
         self.AESKey = None
 
     def initSession(self):
@@ -34,12 +36,16 @@ class Server:
         self.AESKey = decryptRSAcipher.decrypt(enc_session_key)
 
         # Get message content
-        resp = self.processResp(resp[sizeOfKey:])
+        zero = 0
+        self.msgNonce = resp[sizeOfKey:sizeOfKey+8] + zero.to_bytes(8, 'big')
+        resp = self.processResp(resp[sizeOfKey+8:])
 
         # Authenticate user
         username, password = resp.split(":".encode("utf-8"))
+        h = SHA256.new(data=password)
+        password = h.digest()
         if (not self.authUser(username.decode('utf-8'), password)):
-            print(f'Nice try hacker man, get outta here!')
+            print('Nice try hacker man, get outta here!')
             exit(1)
 
         self.currentUser = username.decode('utf-8')
@@ -65,23 +71,28 @@ class Server:
     def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
-        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM)
+        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, self.msgNonce)
         if(data != b''):
             cipher_text, tag = cipher_aes.encrypt_and_digest(
                 message + " ".encode('utf-8') + data)
         else:
             cipher_text, tag = cipher_aes.encrypt_and_digest(message)
-        return cipher_aes.nonce + tag + cipher_text
+        self.incNonce()
+        return tag + cipher_text
 
     def processResp(self, resp):
-        nonce = resp[:16]
-        tag = resp[16:32]
-        ciphertext = resp[32:]
-        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, nonce)
-        return cipher_aes.decrypt_and_verify(ciphertext, tag)
+        tag = resp[:16]
+        ciphertext = resp[16:]
+        cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, self.msgNonce)
+        self.incNonce()
+        try:
+            plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            return plain
+        except ValueError:
+            print('MAC verification failed, ending session...')
+            exit(1)
 
     def getResponse(self):
-        # add numTries and make it a timeout?
         response = False
         while (not response):
             resp = self.readMsg()
@@ -112,6 +123,9 @@ class Server:
     def clearMsgs(self):
         for msg in os.listdir(self.serverAddress + '/IN'): os.remove(self.serverAddress + '/IN/' + msg)
         for msg in os.listdir(self.serverAddress + '/OUT'): os.remove(self.serverAddress + '/OUT/' + msg)
+
+    def incNonce(self):
+        self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
 
     ### COMMANDS ###
 
@@ -155,9 +169,10 @@ class Server:
         self.writeMsg(self.encMsg("Working directory is now: %s" %self.workingDir))
     
     def lst(self):
-        # TODO: perhaps return a value if there is nothing in the folder?
         dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
                                      self.currentUser + self.workingDir))
+        if len(dirList) == 0:
+            dirList = '<empty>'
         self.writeMsg(self.encMsg(dirList))
 
     def upl(self, fileName, data):
@@ -175,8 +190,7 @@ class Server:
             os.remove(self.getOsPath() + fileName)
             self.writeMsg(self.encMsg("Removed"))
         else:
-            print("The file does not exist")
-
+            self.writeMsg(self.encMsg("The file does not exist"))
 
 
 def main():
@@ -196,12 +210,11 @@ def main():
                 msg = s.processResp(msg)
                 # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
                 msg = msg.split(' '.encode('utf-8'), 2)
-                cmd = msg[0].decode('utf-8')
+                cmd = msg[0].decode('utf-8').lower()
                 if len(msg) > 1:
                     args = msg[1:]
                     name = args[0].decode('utf-8')
                 # print("msg: %s" % msg)
-                # TODO: maybe make these case insensitive? LST doesn't currently count as lst
                 if cmd == "mkd":
                     s.mkd(name)
                 elif cmd == "rmd":
