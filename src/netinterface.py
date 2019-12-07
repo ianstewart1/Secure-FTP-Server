@@ -15,10 +15,7 @@ class network_interface:
             os.mkdir(addr_dir)
             os.mkdir(addr_dir + '/IN')
             os.mkdir(addr_dir + '/OUT')
-        for msg in os.listdir(addr_dir + '/IN'):
-            os.remove(addr_dir + '/IN/' + msg)
-        for msg in os.listdir(addr_dir + '/OUT'):
-            os.remove(addr_dir + '/OUT/' + msg)
+        self.clear_msgs()
 	
     def send_msg(self, dst, msg):
 
@@ -50,3 +47,10 @@ class network_interface:
 
             if status: return msg
             else: time.sleep(0.5)
+
+    def clear_msgs(self):
+        addr_dir = self.net_path + self.own_addr
+        for msg in os.listdir(addr_dir + '/IN'):
+            os.remove(addr_dir + '/IN/' + msg)
+        for msg in os.listdir(addr_dir + '/OUT'):
+            os.remove(addr_dir + '/OUT/' + msg)
