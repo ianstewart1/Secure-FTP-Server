@@ -32,7 +32,7 @@ class Client:
         self.networkPath = network
         self.networkRef = None
 
-    def initializeSession(self):
+    def initializeSession(self, newUser = False):
         print('Establishing session...')
         self.login()
         # initialize network connection
@@ -46,8 +46,12 @@ class Client:
         enc_session_key = cipher_rsa.encrypt(self.AESKey)
 
         # Encrypt the data with the AES session key
-        cipherContent = self.username.encode(
-            'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
+        if not newUser:
+            cipherContent = "login:".encode('utf-8') + self.username.encode(
+                'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
+        else:
+            cipherContent = "newusr:".encode('utf-8') + self.username.encode(
+                'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
         # Initilize AES nonce (replay protection)
         zero = 0
         randomBytes = get_random_bytes(8)
@@ -187,12 +191,15 @@ class Client:
     # • RMF – removing a file from a folder on the server
 
 
-def main():
+def main(newClient = False):
     c = Client()
     try:
         # TODO: add getopt to specify client folder destination
         c.loadRSAKeys()
-        c.initializeSession()
+        if newClient:
+            c.initializeSession(True)
+        else:
+            c.initializeSession()
         # set up session keys and establish secure connection here
         while True:
             # send message to server
@@ -217,12 +224,24 @@ def main():
                 msg = c.processResp(c.readMsg()).decode('utf-8')
             # print server response
             print(msg)
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        c.clearMessages()
-        sys.exit(0)
+
     finally:
         c.endSession()
 
 
-main()
+try:
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='hn', longopts=['help', 'newuser'])
+except getopt.GetoptError:
+	print('Usage: python client.py -n)')
+	sys.exit(1)
+
+newUser = False
+
+for opt, arg in opts:
+    if opt == '-h' or opt == '--help':
+        print('Usage: python network.py -n')
+        sys.exit(0)
+    elif opt == '-n' or opt == '--newuser':
+        newUser = True
+
+main(newUser)

@@ -28,7 +28,7 @@ class network_interface:
         else:
             next_msg = '0000'
 		
-        next_msg += '--' + dst
+        next_msg += '--' + self.own_addr[1:] + '--' + dst
         with open(out_dir + '/' + next_msg, 'wb') as f: f.write(msg)
 
     def receive_msg(self):
@@ -43,9 +43,13 @@ class network_interface:
             if len(msgs) - 1 > self.last_read: 
                 with open(in_dir + '/' + msgs[self.last_read + 1], 'rb') as f: msg = f.read()
                 status = True
+                src = msgs[self.last_read + 1].split('--')[1]
                 self.last_read += 1
 
-            if status: return msg
+            if status: 
+                if src != 'server':
+                    return msg, src
+                return msg
             else: time.sleep(0.5)
 
     def clear_msgs(self):

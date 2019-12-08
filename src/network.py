@@ -31,23 +31,25 @@ class Network:
         if len(msgs) <= self.lastRead[src]:
             self.lastRead[src] = -1
         elif len(msgs) - 1 > self.lastRead[src]:
-            dst = msgs[-1].split('--')[1]
+            dst = msgs[-1].split('--')[2]
+            src = msgs[-1].split('--')[1]
             if dst not in self.addressList:
                 os.remove(self.networkAddress + '/' + src + '/OUT/' + msgs[-1])
             else:
                 with open(self.networkAddress + '/' + src + '/OUT/' + msgs[-1], 'rb') as f:
                     msg = f.read()
                 self.lastRead[src] += 1
-                return dst, msg
-        return '', ''
+                return src, dst, msg
+        return '', '', ''
 
-    def writeMsg(self, dst, msg):
+    def writeMsg(self, src, dst, msg):
         msgs = sorted(os.listdir(self.networkAddress + '/' + dst + '/IN'))
         if len(msgs) > 0:
-            next_msg = (int.from_bytes(bytes.fromhex(msgs[-1]), byteorder='big') + 1).to_bytes(2, byteorder='big').hex()
+            # increment message number
+            next_msg = (int.from_bytes(bytes.fromhex(msgs[-1].split('--')[0]), byteorder='big') + 1).to_bytes(2, byteorder='big').hex()
         else:
             next_msg = '0000'
-        with open(self.networkAddress + '/' + dst + '/IN/' + next_msg, 'wb') as f:
+        with open(self.networkAddress + '/' + dst + '/IN/' + next_msg + "--" + src, 'wb') as f:
             f.write(msg)
 
 
@@ -56,13 +58,13 @@ def main():
     n.clearDir()
     cycles = 0
     while True:
-        print('Running' + '.'*(cycles%4) + ' '*4, end='\r')
-        time.sleep(0.5)
+        print('Running', end='\r') # + '.'*(cycles%4) + ' '*4, end='\r')
+        # time.sleep(0.5)
         n.getAddresses()
         for addr in n.addressList:
-            dst, msg = n.readMsg(addr)
+            src, dst, msg = n.readMsg(addr)
             if (dst != '' and msg != ''):
-                n.writeMsg(dst, msg)
+                n.writeMsg(src, dst, msg)
         cycles += 1
 
 main()
