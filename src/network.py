@@ -8,6 +8,8 @@ class Network:
 
     def __init__(self, netAddress=os.getcwd()):
         if 'src' in netAddress:
+            if os.path.exists(netAddress.split('src')[0] + 'network') == False:
+                os.mkdir(netAddress.split('src')[0] + 'network')
             netAddress = netAddress.split('src')[0] + 'network'
         self.networkAddress = netAddress
         self.addressList = []

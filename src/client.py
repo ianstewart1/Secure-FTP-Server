@@ -37,7 +37,7 @@ class Client:
         self.login()
         # initialize network connection
         self.networkRef = network_interface(self.networkPath, self.username)
-        time.sleep(1) # <-- I don't like this
+        # time.sleep(1) # <-- I don't like this
 
         self.AESKey = get_random_bytes(16)
 
@@ -132,7 +132,6 @@ class Client:
         return salt + keyTag + keyNonce + enc_session_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, path, data=None):
-        # TODO: Re-write to take in byte string rather than opening a file that has just been written
         path = self.clientAddress + '/' + path
 
         # Decrypt a give file
@@ -169,6 +168,12 @@ class Client:
     def incNonce(self):
         self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
 
+    def clearMessages(self):
+        self.networkRef.clear_msgs()
+
+    def endSession(self):
+        self.writeMsg(self.encMsg("END_SESSION"))
+
     ### COMMANDS ###
 
     # • MKD – creating a folder on the server
@@ -182,9 +187,9 @@ class Client:
 
 
 def main():
+    c = Client()
     try:
         # TODO: add getopt to specify client folder destination
-        c = Client()
         c.loadRSAKeys()
         c.initializeSession()
         # set up session keys and establish secure connection here
@@ -213,8 +218,10 @@ def main():
             print(msg)
             time.sleep(0.5)
     except KeyboardInterrupt:
-        c.clearMsgs()
+        c.clearMessages()
         sys.exit(0)
+    finally:
+        c.clearMessages()
 
 
 main()
