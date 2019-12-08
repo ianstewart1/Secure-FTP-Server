@@ -18,6 +18,10 @@ class Server:
         self.serverAddress = server
         self.serverRSApublic = self.serverAddress + '/serverRSApublic.pem'
         self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
+        with open(self.serverRSApublic, 'rb') as f:
+            self.serverRSApublic = RSA.import_key(f.read())
+        with open(self.serverRSAprivate, 'rb') as f:
+            self.serverRSAprivate = RSA.import_key(f.read())
         self.workingDir = None
         self.currentUser = None
         self.lastMsg = 0
@@ -30,11 +34,11 @@ class Server:
         self.networkRef = None
         self.sessions = {}
 
-    def initSession(self):
-        self.loadRSAKeys()
+    def initSession(self, resp = '', src = ''):
         self.networkRef = network_interface(self.networkPath, 'server')
         # wait for client message
-        resp, src = self.readMsg()
+        if resp == '' and src == '':
+            resp, src = self.readMsg()
 
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
         sizeOfKey = self.serverRSApublic.size_in_bytes()
@@ -66,11 +70,11 @@ class Server:
         self.sessions[self.currentUser] = Session(self.currentUser, self.AESKey, self.msgNonce, self.workingDir, self.lastMsg, self.networkRef)
         
 
-    def loadRSAKeys(self):
-        with open(self.serverRSApublic, 'rb') as f:
-            self.serverRSApublic = RSA.import_key(f.read())
-        with open(self.serverRSAprivate, 'rb') as f:
-            self.serverRSAprivate = RSA.import_key(f.read())
+    # def loadRSAKeys(self):
+    #     with open(self.serverRSApublic, 'rb') as f:
+    #         self.serverRSApublic = RSA.import_key(f.read())
+    #     with open(self.serverRSAprivate, 'rb') as f:
+    #         self.serverRSAprivate = RSA.import_key(f.read())
 
     def authUser(self, username, passHash):
         if username in os.listdir(self.serverAddress + '/USERS'):
@@ -114,75 +118,6 @@ class Server:
 
     def incNonce(self):
         self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
-
-    ### COMMANDS ###
-
-    # • MKD – creating a folder on the server
-    # • RMD – removing a folder from the server
-    # • GWD – asking for the name of the current folder(working directory) on the server
-    # • CWD – changing the current folder on the server
-    # • LST – listing the content of a folder on the server
-    # • UPL – uploading a file to the server
-    # • DNL – downloading a file from the server
-    # • RMF – removing a file from a folder on the server
-
-    def mkd(self, folderName):
-        # makes the directory from the working directory
-        try: 
-            os.mkdir(self.getOsPath() + folderName)
-            self.writeMsg(self.encMsg("Finished"))
-        except OSError:
-            self.writeMsg(self.encMsg("Mkd Failed"))
-        
-    def rmd(self, folderName):
-        # removes a directory if it exists
-        try:
-            os.rmdir(self.getOsPath() + folderName)
-            self.writeMsg(self.encMsg("Finished"))
-        except OSError:
-            self.writeMsg(self.encMsg("Deletion Failed"))
-    
-    def gwd(self):
-        self.writeMsg(self.encMsg("Working directory is: " + self.workingDir))
-    
-    def cwd(self, newDir):
-        dirs = newDir.split("/")
-        for nd in dirs:
-            if (nd == ".."):
-                if(self.workingDir == '/root'):
-                    self.writeMsg(self.encMsg(
-                        "Working directory is now: %s" % self.workingDir))
-                    return
-                else:
-                    self.workingDir = "/".join(self.workingDir.split("/")[:-1])
-            elif (nd != ".."):
-                if(os.path.exists( self.getOsPath() + newDir)):
-                    self.workingDir = self.workingDir+"/"+newDir
-        self.writeMsg(self.encMsg("Working directory is now: %s" %self.workingDir))
-    
-    def lst(self):
-        dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
-                                     self.currentUser + self.workingDir))
-        if len(dirList) == 0:
-            dirList = '<empty>'
-        self.writeMsg(self.encMsg(dirList))
-
-    def upl(self, fileName, data):
-        with open(self.getOsPath()+fileName, 'wb') as f:
-            f.write(data)
-        self.writeMsg(self.encMsg("%s uploaded" %fileName))
-
-    def dnl(self, fileName):
-        with open(self.getOsPath()+fileName, "rb") as f:
-            data = f.read()
-        self.writeMsg(self.encMsg(data))
-
-    def rmf(self, fileName):
-        if os.path.exists(self.getOsPath() + fileName):
-            os.remove(self.getOsPath() + fileName)
-            self.writeMsg(self.encMsg("Removed"))
-        else:
-            self.writeMsg(self.encMsg("The file does not exist"))
 
 
 class Session:
@@ -347,14 +282,19 @@ def main():
                     s.sessions[src].writeMsg(s.sessions[src].encMsg("Error"))
             elif cmd == "rmf":
                 s.sessions[src].rmf(name)
+            elif cmd == "end_session":
+                print("bye")
+                del s.sessions[src]
             else:
+                print(cmd)
                 s.sessions[src].writeMsg(s.sessions[src].encMsg("Invalid command"))
             time.sleep(0.5)
             # print client message
             print(f"Client command: {msg}{' '*20}")
             # time.sleep(0.5)
         else:
-            s.initSession()
+            print(src)
+            s.initSession(msg, src)
 
 
 main()
