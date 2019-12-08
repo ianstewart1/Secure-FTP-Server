@@ -235,11 +235,13 @@ except getopt.GetoptError:
 	print('Usage: python client.py -n)')
 	sys.exit(1)
 
+newUser = False
+
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
         print('Usage: python network.py -n')
         sys.exit(0)
     elif opt == '-n' or opt == '--newuser':
-        main(True)
-    else:
-        main()
+        newUser = True
+
+main(newUser)
