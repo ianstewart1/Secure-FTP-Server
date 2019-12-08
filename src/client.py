@@ -217,10 +217,7 @@ def main():
                 msg = c.processResp(c.readMsg()).decode('utf-8')
             # print server response
             print(msg)
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        c.clearMessages()
-        sys.exit(0)
+            
     finally:
         c.endSession()
 
