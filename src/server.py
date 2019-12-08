@@ -57,7 +57,7 @@ class Server:
         h = SHA256.new(data=password)
         password = h.digest()
         if auth_type.decode('utf-8') == "newusr":
-            self.createNewUser(username, password)
+            self.createNewUser(username.decode('utf-8'), password)
         if (not self.authUser(username.decode('utf-8'), password)):
             print('Nice try hacker man, get outta here!')
             exit(1)
