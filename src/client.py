@@ -173,6 +173,7 @@ class Client:
 
     def endSession(self):
         self.writeMsg(self.encMsg("END_SESSION"))
+        self.clearMessages()
 
     ### COMMANDS ###
 
@@ -221,7 +222,7 @@ def main():
         c.clearMessages()
         sys.exit(0)
     finally:
-        c.clearMessages()
+        c.endSession()
 
 
 main()

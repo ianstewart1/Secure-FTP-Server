@@ -181,6 +181,8 @@ class Server:
             self.writeMsg(self.encMsg("The file does not exist"))
 
 
+
+
 def main():
     s = Server()
     # set up session keys and establish secure connection here
@@ -217,6 +219,8 @@ def main():
                 s.writeMsg(s.encMsg("Error"))
         elif cmd == "rmf":
             s.rmf(name)
+        elif cmd == "END":
+            s.initSession()
         else:
             s.writeMsg(s.encMsg("Invalid command"))
         time.sleep(0.5)
