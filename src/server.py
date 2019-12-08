@@ -53,9 +53,11 @@ class Server:
         resp = self.processResp(resp[sizeOfKey+8:])
 
         # Authenticate user
-        username, password = resp.split(":".encode("utf-8"))
+        auth_type, username, password = resp.split(":".encode("utf-8"), 3)
         h = SHA256.new(data=password)
         password = h.digest()
+        if auth_type.decode('utf-8') == "newusr":
+            self.createNewUser(username, password)
         if (not self.authUser(username.decode('utf-8'), password)):
             print('Nice try hacker man, get outta here!')
             exit(1)
@@ -70,11 +72,16 @@ class Server:
         self.sessions[self.currentUser] = Session(self.currentUser, self.AESKey, self.msgNonce, self.workingDir, self.lastMsg, self.networkRef)
         
 
-    # def loadRSAKeys(self):
-    #     with open(self.serverRSApublic, 'rb') as f:
-    #         self.serverRSApublic = RSA.import_key(f.read())
-    #     with open(self.serverRSAprivate, 'rb') as f:
-    #         self.serverRSAprivate = RSA.import_key(f.read())
+    def createNewUser(self, username, passHash):
+        userfolder = self.serverAddress + "/USERS/" + username
+        if os.path.exists(userfolder):
+            self.writeMsg(self.encMsg("Invalid Username"))
+        else:
+            os.mkdir(userfolder)
+            os.mkdir(userfolder + "/root")
+            with open(userfolder + "/.hash_check.hash", "wb") as f:
+                f.write(passHash)
+
 
     def authUser(self, username, passHash):
         if username in os.listdir(self.serverAddress + '/USERS'):
@@ -188,16 +195,22 @@ class Session:
     def mkd(self, folderName):
         # makes the directory from the working directory
         try:
-            os.mkdir(self.getOsPath() + folderName)
-            self.writeMsg(self.encMsg("Finished"))
+            if self.checkAddress(folderName):
+                os.mkdir(self.getOsPath() + folderName)
+                self.writeMsg(self.encMsg("Finished"))
+            else:
+                self.writeMsg(self.encMsg("Permition Failed"))
         except OSError:
             self.writeMsg(self.encMsg("Mkd Failed"))
 
     def rmd(self, folderName):
         # removes a directory if it exists
         try:
-            os.rmdir(self.getOsPath() + folderName)
-            self.writeMsg(self.encMsg("Finished"))
+            if self.checkAddress(folderName):
+                os.rmdir(self.getOsPath() + folderName)
+                self.writeMsg(self.encMsg("Finished"))
+            else:
+                self.writeMsg(self.encMsg("Permition Failed"))
         except OSError:
             self.writeMsg(self.encMsg("Deletion Failed"))
 
@@ -205,18 +218,10 @@ class Session:
         self.writeMsg(self.encMsg("Working directory is: " + self.workingDir))
 
     def cwd(self, newDir):
-        dirs = newDir.split("/")
-        for nd in dirs:
-            if (nd == ".."):
-                if(self.workingDir == '/root'):
-                    self.writeMsg(self.encMsg(
-                        "Working directory is now: %s" % self.workingDir))
-                    return
-                else:
-                    self.workingDir = "/".join(self.workingDir.split("/")[:-1])
-            elif (nd != ".."):
-                if(os.path.exists(self.getOsPath() + newDir)):
-                    self.workingDir = self.workingDir+"/"+newDir
+        if self.checkAddress(newDir):
+            self.workingDir += newDir
+        else:
+            self.writeMsg(self.encMsg("Permission Failed"))
         self.writeMsg(self.encMsg(
             "Working directory is now: %s" % self.workingDir))
 
@@ -243,6 +248,21 @@ class Session:
             self.writeMsg(self.encMsg("Removed"))
         else:
             self.writeMsg(self.encMsg("The file does not exist"))
+
+    def checkAddress(self, addr):
+        newDir = self.workingDir
+        dirs = addr.split("/")
+        for nd in dirs:
+            if (nd == ".."):
+                if(newDir == '/root'):
+                    return False
+                else:
+                    newDir = "/".join(self.workingDir.split("/")[:-1])
+            else:
+                if(os.path.exists(self.getOsPath() + nd)):
+                    newDir = newDir+"/"+nd
+        print(newDir)
+        return True
 
 
 def main():
