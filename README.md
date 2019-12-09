@@ -37,6 +37,7 @@ Final project for Applied Cryptography
 2. If the message does not contain the -N flag, the server will hash the password given and check against the hashed password file stored in the user's folder. The server authenticates the client by confirming the two hashes are equal. 
 3. The server confirms authentication by sending the client their username encrypted in AES with the session key and nonce generated from the random bytes sent by the client
 
+![Session Establishment Diagram](diagrams/sessionEstablishmentDiagram)
 
 
 **Protocol for commands:**
