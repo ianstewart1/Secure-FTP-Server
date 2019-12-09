@@ -11,7 +11,16 @@ Final project for Applied Cryptography
 ### Flags:
 - -n: creates a new user
 
-## General Rules
+## Client Commands
+|Command|Description|Arguments|
+|---|---|---|
+|MKD|   |   |
+|RMD|   |   |
+|GWD|   |   |
+|LST|   |   |
+|UPL|   |   |
+|DNL|   |   |
+|RMF|   |   |
 
 ## Crypto Stuff
 - Files are encrypted using AES in GCM mode and a key derived from scrypt
