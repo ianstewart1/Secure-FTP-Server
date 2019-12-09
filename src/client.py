@@ -92,6 +92,8 @@ class Client:
         self.incNonce()
         try:
             plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            if(plain=="end_session"):
+                sys.exit(1)
             return plain
         except ValueError:
             print('MAC verification failed, ending session...')
@@ -176,8 +178,10 @@ class Client:
         self.networkRef.clear_msgs()
 
     def endSession(self):
+        print("ending session")
         self.writeMsg(self.encMsg("END_SESSION"))
         self.clearMessages()
+        print("session over")
 
     ### COMMANDS ###
 
@@ -224,7 +228,6 @@ def main(newClient = False):
                 msg = c.processResp(c.readMsg()).decode('utf-8')
             # print server response
             print(msg)
-
     finally:
         c.endSession()
 

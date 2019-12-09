@@ -59,7 +59,6 @@ def main():
     cycles = 0
     while True:
         print('Running', end='\r') # + '.'*(cycles%4) + ' '*4, end='\r')
-        # time.sleep(0.5)
         n.getAddresses()
         for addr in n.addressList:
             src, dst, msg = n.readMsg(addr)

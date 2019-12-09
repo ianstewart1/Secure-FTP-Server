@@ -60,7 +60,8 @@ class Server:
             self.createNewUser(username.decode('utf-8'), password)
         if (not self.authUser(username.decode('utf-8'), password)):
             print('Nice try hacker man, get outta here!')
-            exit(1)
+            self.writeMsg(self.encMsg("END_SESSION"), username.decode('utf-8'))
+            return
 
         self.currentUser = username.decode('utf-8')
         self.workingDir = '/root'
@@ -75,7 +76,8 @@ class Server:
     def createNewUser(self, username, passHash):
         userfolder = self.serverAddress + "/USERS/" + username
         if os.path.exists(userfolder):
-            self.writeMsg(self.encMsg("Invalid Username"))
+            self.writeMsg(self.encMsg("Invalid username"), username)
+            self.writeMsg(self.encMsg("end_session"), username)
         else:
             os.mkdir(userfolder)
             os.mkdir(userfolder + "/root")
@@ -114,14 +116,13 @@ class Server:
             print('MAC verification failed, ending session...')
             exit(1)
 
-    def writeMsg(self, msg):
-        self.networkRef.send_msg(self.currentUser, msg)
+    def writeMsg(self, msg, dst = ''):
+        if(dst == ''):
+            dst = self.currentUser
+        self.networkRef.send_msg(dst, msg)
 
     def readMsg(self):
         return self.networkRef.receive_msg()
-
-    def getOsPath(self):
-        return self.serverAddress + '/USERS/' + self.currentUser + self.workingDir + "/"
 
     def incNonce(self):
         self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
@@ -193,7 +194,7 @@ class Session:
     # • RMF – removing a file from a folder on the server
 
     def mkd(self, folderName):
-        # makes the directory from the working directory
+        # makes the directory from the working directory, WARNING accepts paths
         try:
             if self.checkAddress(folderName):
                 os.mkdir(self.getOsPath() + '/' + folderName)
@@ -204,7 +205,7 @@ class Session:
             self.writeMsg(self.encMsg("Mkd Failed"))
 
     def rmd(self, folderName):
-        # removes a directory if it exists
+        # removes a directory if it exists, WARNING accepts paths
         try:
             if self.checkAddress(folderName):
                 os.rmdir(self.getOsPath() + "/" + folderName)
@@ -215,9 +216,11 @@ class Session:
             self.writeMsg(self.encMsg("Deletion Failed"))
 
     def gwd(self):
+        # returns the working directory
         self.writeMsg(self.encMsg("Working directory is: " + self.workingDir))
 
     def cwd(self, newDir):
+        # navigates to a new working directory. Checks address for security but also should be secure
         if self.checkAddress(newDir):
             dirs = newDir.split("/")
             for nd in dirs:
@@ -235,6 +238,7 @@ class Session:
             "Working directory is now: %s" % self.workingDir))
 
     def lst(self):
+        # lists the contents of the working directory
         dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
                                        self.currentUser + self.workingDir))
         if len(dirList) == 0:
@@ -242,7 +246,7 @@ class Session:
         self.writeMsg(self.encMsg(dirList))
 
     def upl(self, fileName, data):
-        # TODO: test
+        # Uploads a file shouldn't accept paths but check address is run for redundant security
         if self.checkAddress(fileName):
             with open(self.getOsPath()+fileName, 'wb') as f:
                 f.write(data)
@@ -251,7 +255,7 @@ class Session:
             self.writeMsg(self.encMsg("Upload Failed"))
 
     def dnl(self, fileName):
-        #TODO: test
+        # Downloads a given filename WARNING: accepts paths
         if self.checkAddress(fileName):
             with open(self.getOsPath()+fileName, "rb") as f:
                 data = f.read()
@@ -260,7 +264,7 @@ class Session:
             self.writeMsg(self.encMsg("Download Failed"))
 
     def rmf(self, fileName):
-        # TODO: test
+        # Removes a file at the specified filename WARNING: accepts paths which is why the check address is run
         if self.checkAddress(fileName):
             if os.path.exists(self.getOsPath() + fileName):
                 os.remove(self.getOsPath() + fileName)
@@ -271,6 +275,7 @@ class Session:
             self.writeMsg(self.encMsg("Deletion Failed"))
 
     def checkAddress(self, addr):
+        # ensures that whatever address is being passed is within the root directory of the user
         newDir = self.workingDir
         dirs = addr.split("/")
         for nd in dirs:
@@ -298,6 +303,7 @@ def main():
             # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
             msg = msg.split(' '.encode('utf-8'), 2)
             cmd = msg[0].decode('utf-8').lower()
+            print(cmd)
             if len(msg) > 1:
                 #TODO implement message length checks
                 args = msg[1:]
