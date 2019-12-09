@@ -207,7 +207,7 @@ class Session:
         # removes a directory if it exists
         try:
             if self.checkAddress(folderName):
-                os.rmdir(self.getOsPath() + folderName)
+                os.rmdir(self.getOsPath() + "/" + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
                 self.writeMsg(self.encMsg("Permition Failed"))
