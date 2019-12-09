@@ -56,5 +56,7 @@ class network_interface:
         addr_dir = self.net_path + self.own_addr
         for msg in os.listdir(addr_dir + '/IN'):
             os.remove(addr_dir + '/IN/' + msg)
+        # os.remove(addr_dir + '/IN')
         for msg in os.listdir(addr_dir + '/OUT'):
             os.remove(addr_dir + '/OUT/' + msg)
+        # os.remove(addr_dir + '/OUT')
