@@ -135,23 +135,26 @@ class Client:
         # derive file key from user password
         salt = get_random_bytes(16)
         masterFile = scrypt(self.filePassword.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
-        fileKey = get_random_bytes(16)
+        # fileKey = get_random_bytes(16)
 
         # encrypt the file key
         cipher_aes = AES.new(masterFile, AES.MODE_GCM)
-        enc_file_key, keyTag = cipher_aes.encrypt_and_digest(fileKey)
-        keyNonce = cipher_aes.nonce
+        # enc_file_key, keyTag = cipher_aes.encrypt_and_digest(fileKey)
+        # keyNonce = cipher_aes.nonce
 
         # encrypt the data with the AES file key
-        cipher_aes = AES.new(fileKey, AES.MODE_GCM)
+        # cipher_aes = AES.new(fileKey, AES.MODE_GCM)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
 
         # if we want to write to another file
         if file_out != '':
             with open(self.clientAddress + '/' + file_out, 'wb') as f:
                 [f.write(x)
-                 for x in (salt, keyTag, keyNonce, enc_file_key, cipher_aes.nonce, tag, ciphertext)]
-        return salt + keyTag + keyNonce + enc_file_key + cipher_aes.nonce + tag + ciphertext
+                 for x in (salt, cipher_aes.nonce, tag, ciphertext)]
+        return salt + cipher_aes.nonce + tag + ciphertext
+        #         [f.write(x)
+        #          for x in (salt, keyTag, keyNonce, enc_file_key, cipher_aes.nonce, tag, ciphertext)]
+        # return salt + keyTag + keyNonce + enc_file_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, path, data=None):
         path = self.clientAddress + '/' + path
@@ -159,24 +162,31 @@ class Client:
         # parse a given file
         if data == None:
             file_in = open(path, 'rb')
-            salt, keyTag, keyNonce, enc_file_key, nonce, tag, ciphertext = \
+            salt, nonce, tag, ciphertext = \
                 [file_in.read(x)
-                for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
+                 for x in (16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
+            # salt, keyTag, keyNonce, enc_file_key, nonce, tag, ciphertext = \
+            #     [file_in.read(x)
+            #     for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
             file_in.close()
         # decrypt payload into a file
         else:
-            salt, keyTag, keyNonce, enc_file_key, nonce, tag = \
-                [data[x:x+16] for x in (0, 16, 32, 48, 64, 80)]
-            ciphertext = data[96:]
+            salt, nonce, tag, ciphertext = \
+                [data[x:x+16]
+                 for x in (0, 16, 32, -1)]
+            ciphertext = data[48:]
+            # salt, keyTag, keyNonce, enc_file_key, nonce, tag = \
+            #     [data[x:x+16] for x in (0, 16, 32, 48, 64, 80)]
+            # ciphertext = data[96:]
 
-        masterFile = scrypt(self.filePassword.encode('utf-8'),
+        fileKey = scrypt(self.filePassword.encode('utf-8'),
                         salt, 16, N=2**20, r=8, p=1)
         # decrypt the session key with the public RSA key
-        cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
-        session_key = cipher_aes.decrypt_and_verify(enc_file_key, keyTag)
+        # cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
+        # session_key = cipher_aes.decrypt_and_verify(enc_file_key, keyTag)
 
         # decrypt the data with the AES session key
-        cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
+        cipher_aes = AES.new(fileKey, AES.MODE_GCM, nonce)
         data = cipher_aes.decrypt_and_verify(ciphertext, tag)
         with open(path, 'wb') as f:
             f.write(data)
