@@ -8,8 +8,9 @@ Final project for Applied Cryptography
 1. Run the Network
 2. Run the Server
 3. Run the Client
+
 ### Flags:
-- -N: creates a new user
+* -N: creates a new user
 
 ## Client Commands
 |Command|Description|Arguments|
@@ -23,8 +24,8 @@ Final project for Applied Cryptography
 |RMF|   |   |
 
 ## Encryption Specifications
-- Files are encrypted using AES in GCM mode and a key derived from scrypt
-- messages are encrypted using AES in GCM mode and a key created by the client a the beginning of each session
+* Files are encrypted using AES in GCM mode and a key derived from scrypt
+* Messages are encrypted using AES in GCM mode and a key created by the client a the beginning of each session
 
 **Key establishment protocol:** 
 1. Client generates a session key of 16 random bytes
@@ -41,9 +42,8 @@ Final project for Applied Cryptography
 
 
 **Protocol for commands:**
-1. When the client enters a command, the command, arguments and payload are sent over encrypted with AES using the session key and incremented nonce. 
-Ex: 
-Client command in the format: 'mkd <directory name>' will be encrypted as 'mkd <directory name>' and sent to the server 
+* When the client enters a command, the command, arguments and payload are sent over encrypted with AES using the session key and incremented nonce. 
+* Ex: Client command in the format: 'mkd \<directory name\>' will be encrypted as 'mkd \<directory name\>' and sent to the server 
   
 ![Command Diagram](diagrams/b.png)
 
