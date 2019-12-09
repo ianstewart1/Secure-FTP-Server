@@ -37,7 +37,6 @@ class Client:
         self.login()
         # initialize network connection
         self.networkRef = network_interface(self.networkPath, self.username)
-        # time.sleep(1) # <-- I don't like this
 
         self.AESKey = get_random_bytes(16)
 
@@ -191,7 +190,7 @@ class Client:
     # • RMF – removing a file from a folder on the server
 
 
-def main(newClient = False):
+def main(newClient=False):
     c = Client()
     try:
         # TODO: add getopt to specify client folder destination
