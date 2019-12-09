@@ -378,8 +378,8 @@ serverRSA = None
 
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
-        print('Usage: python server.py -h <help> -N -S path_to_server_dir -n path_to_network_dir -s path_to_server_RSA_keys_directory')
-        print('All args are optional. Note that if serverRSA is are left to default, the server RSA keys must be in the server directory')
+        print('Usage: python server.py -h <help> -S path_to_server_dir -n path_to_network_dir -s path_to_server_RSA_keys_directory')
+        print('All args are optional. Note that if serverRSA is left to default, the server RSA keys must be in the server directory')
         sys.exit(0)
     elif opt == '-S' or opt == '--server':
         server = arg
