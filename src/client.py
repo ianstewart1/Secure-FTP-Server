@@ -30,6 +30,7 @@ class Client:
         # user params
         self.username = None
         self.password = None
+        self.filePassword = None
         # network connection
         if network == None:
             network = os.getcwd().split('src')[0] + 'network'
@@ -119,11 +120,14 @@ class Client:
         # called at the start of a session
         userN = ''
         passwrd = ''
-        while userN == '' or passwrd == '':
+        fpasswrd = ''
+        while userN == '' or passwrd == '' or fpasswrd == '':
             userN = input("Enter your username: ")
             passwrd = getpass.getpass("Enter your password: ")
+            fpasswrd = getpass.getpass("Enter your file encryption/decryption password: ")
         self.username = userN
         self.password = passwrd
+        self.filePassword = fpasswrd
 
     def encryptFile(self, file_in, file_out=''):
         # because server should never have access to plaintext file data
@@ -132,15 +136,9 @@ class Client:
         
         # derive file key from user password
         salt = get_random_bytes(16)
-        masterFile = scrypt(self.password.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
-        fileKey = get_random_bytes(16)
+        fileKey = scrypt(self.filePassword.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
 
-        # encrypt the file key
-        cipher_aes = AES.new(masterFile, AES.MODE_GCM)
-        enc_file_key, keyTag = cipher_aes.encrypt_and_digest(fileKey)
-        keyNonce = cipher_aes.nonce
-
-        # encrypt the data with the AES file key
+        # encrypt the data with the file key
         cipher_aes = AES.new(fileKey, AES.MODE_GCM)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
 
@@ -148,33 +146,33 @@ class Client:
         if file_out != '':
             with open(self.clientAddress + '/' + file_out, 'wb') as f:
                 [f.write(x)
-                 for x in (salt, keyTag, keyNonce, enc_file_key, cipher_aes.nonce, tag, ciphertext)]
-        return salt + keyTag + keyNonce + enc_file_key + cipher_aes.nonce + tag + ciphertext
+                 for x in (salt, cipher_aes.nonce, tag, ciphertext)]
+        return salt + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, path, data=None):
         path = self.clientAddress + '/' + path
 
-        # parse a given file
+        # parse a given file if data is empty
         if data == None:
             file_in = open(path, 'rb')
-            salt, keyTag, keyNonce, enc_file_key, nonce, tag, ciphertext = \
+            salt, nonce, tag, ciphertext = \
                 [file_in.read(x)
-                for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
+                 for x in (16, 16, 16, -1)]
             file_in.close()
-        # decrypt payload into a file
+
+        # read in data if given
         else:
-            salt, keyTag, keyNonce, enc_file_key, nonce, tag = \
-                [data[x:x+16] for x in (0, 16, 32, 48, 64, 80)]
-            ciphertext = data[96:]
+            salt, nonce, tag, ciphertext = \
+                [data[x:x+16]
+                 for x in (0, 16, 32, -1)]
+            ciphertext = data[48:]
 
-        masterFile = scrypt(self.password.encode('utf-8'),
+        # Generate file key from given filePassword
+        fileKey = scrypt(self.filePassword.encode('utf-8'),
                         salt, 16, N=2**20, r=8, p=1)
-        # decrypt the session key with the public RSA key
-        cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
-        session_key = cipher_aes.decrypt_and_verify(enc_file_key, keyTag)
 
-        # decrypt the data with the AES session key
-        cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
+        # Decrypt the data with the file key
+        cipher_aes = AES.new(fileKey, AES.MODE_GCM, nonce)
         data = cipher_aes.decrypt_and_verify(ciphertext, tag)
         with open(path, 'wb') as f:
             f.write(data)
@@ -248,8 +246,8 @@ serverRSA = None
 
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
-        print('Usage: python client.py -h <help> -N <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA')
-        print('All args are optional. Note that if serverRSA is are left to default, the server public RSA key must be in the client directory')
+        print('Usage: python network.py -h <help> -N <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA')
+        print('All args are optional unless you are a new user and must use -N. Note that if serverRSA is left to default, the server public RSA key must be in the specified directory')
         sys.exit(0)
     elif opt == '-N' or opt == '--newuser':
         newUser = True
