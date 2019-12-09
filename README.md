@@ -27,6 +27,7 @@ Final project for Applied Cryptography
 5. Once the server responds with "Session established.", you may interact with the server normally using any of the commands below. 
 
 ## Client Commands
+Command structure: cmd [args]
 |Command|Description|Arguments|
 |---|---|---|
 |MKD|Creates a directory in the server-side working directory of the user|[Directory Name]|
@@ -66,6 +67,5 @@ Final project for Applied Cryptography
 **Storing sensitive data:**
 * Hashed client passwords are stored on the server side in the user's folder (user does not have access to)
 * Server stores its public key in a plaintext file
-* Server stores its private key in a file encrypted with AES in GCM mode using its password
-* Client stores the Server's public RSA key in the client directory
-* The client's files are stored on the server side in the user's directory encrypted using AES with a password protected key
+* Server stores its private key in a file encrypted with AES in GCM mode using a key derived from the password
+* The client's files are stored on the server side in the user's directory encrypted using AES with a password derived key that only the client ever uses or sees
