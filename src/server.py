@@ -55,7 +55,6 @@ class Server:
         # wait for client message
         if resp == '' and src == '':
             resp, src = self.readMsg()
-        print(resp)
 
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
         sizeOfKey = self.serverRSApublic.size_in_bytes()
@@ -74,7 +73,6 @@ class Server:
         auth_type, username, password = resp.split(":".encode("utf-8"), 3)
         h = SHA256.new(data=password)
         password = h.digest()
-        print(username.decode('utf-8'))
         if auth_type.decode('utf-8') == "newusr":
             self.createNewUser(username.decode('utf-8'), password)
         if (not self.authUser(username.decode('utf-8'), password)):
@@ -151,14 +149,12 @@ class Server:
 
     def getPrivateKey(self, path):
         with open(path, 'rb') as f:
-            salt, keyTag, keyNonce, enc_file_key, nonce, tag, ciphertext = \
+            salt, nonce, tag, ciphertext = \
                 [f.read(x)
-                 for x in (16, 16, 16, 16, 16, 16, -1)]
-        masterFile = scrypt(self.password.encode('utf-8'),
+                 for x in (16, 16, 16, -1)]
+        fileKey = scrypt(self.password.encode('utf-8'),
                         salt, 16, N=2**20, r=8, p=1)
-        cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
-        session_key = cipher_aes.decrypt_and_verify(enc_file_key, keyTag)
-        cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
+        cipher_aes = AES.new(fileKey, AES.MODE_GCM, nonce)
         rsaKey = cipher_aes.decrypt_and_verify(ciphertext, tag)
         self.serverRSAprivate = RSA.import_key(rsaKey)
         print("Key Loaded")
@@ -365,7 +361,6 @@ def main(server, network, serverRSA):
             elif cmd == "end_session":
                 s.sessions[src].writeMsg(s.sessions[src].encMsg("end_session"))
                 del s.sessions[src]
-                print(s.sessions)
             else:
                 s.sessions[src].writeMsg(s.sessions[src].encMsg("Invalid command"))
             time.sleep(0.5)
@@ -373,7 +368,6 @@ def main(server, network, serverRSA):
             print(f"Client command: {msg}{' '*20}")
         else:
             s.initSession(msg, src)
-            print("imeh ere")
 
 
 try:

@@ -125,24 +125,28 @@ class Client:
         self.filePassword = fpasswrd
 
     def encryptFile(self, file_in, file_out=''):
-        # because server should never have access to plaintext file data
-        with open(self.clientAddress + '/' + file_in, 'rb') as f:
-            data = f.read()
-        
-        # derive file key from user password
-        salt = get_random_bytes(16)
-        fileKey = scrypt(self.filePassword.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
+        try:
+            # because server should never have access to plaintext file data
+            with open(self.clientAddress + '/' + file_in, 'rb') as f:
+                data = f.read()
+            
+            # derive file key from user password
+            salt = get_random_bytes(16)
+            fileKey = scrypt(self.filePassword.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
 
-        # encrypt the data with the file key
-        cipher_aes = AES.new(fileKey, AES.MODE_GCM)
-        ciphertext, tag = cipher_aes.encrypt_and_digest(data)
+            # encrypt the data with the file key
+            cipher_aes = AES.new(fileKey, AES.MODE_GCM)
+            ciphertext, tag = cipher_aes.encrypt_and_digest(data)
 
-        # if we want to write to another file
-        if file_out != '':
-            with open(self.clientAddress + '/' + file_out, 'wb') as f:
-                [f.write(x)
-                 for x in (salt, cipher_aes.nonce, tag, ciphertext)]
-        return salt + cipher_aes.nonce + tag + ciphertext
+            # if we want to write to another file
+            if file_out != '':
+                with open(self.clientAddress + '/' + file_out, 'wb') as f:
+                    [f.write(x)
+                    for x in (salt, cipher_aes.nonce, tag, ciphertext)]
+            return salt + cipher_aes.nonce + tag + ciphertext
+        except:
+            print("Encryption Failed")
+            return None
 
     def decryptFile(self, path, data=None):
         path = self.clientAddress + '/' + path
@@ -205,7 +209,10 @@ def main(newClient, client, network, serverRSA):
                 msg = input('Command: ')
                 if msg[:3] == 'upl':
                     data = c.encryptFile(msg[4:])
-                    c.writeMsg(c.encMsg(msg, data))
+                    if data!=None:
+                        c.writeMsg(c.encMsg(msg, data))
+                    else:
+                        msg = ''
                 elif msg[:3] == 'dnl':
                     c.writeMsg(c.encMsg(msg))
                     data = c.processResp(c.readMsg())
@@ -224,7 +231,7 @@ def main(newClient, client, network, serverRSA):
                 sys.exit(0)
             # print server response
             print(msg)
-    except KeyboardInterrupt:
+    except:
         c.writeMsg(c.encMsg("end_session"))
 
 
