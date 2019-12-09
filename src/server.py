@@ -242,21 +242,33 @@ class Session:
         self.writeMsg(self.encMsg(dirList))
 
     def upl(self, fileName, data):
-        with open(self.getOsPath()+fileName, 'wb') as f:
-            f.write(data)
-        self.writeMsg(self.encMsg("%s uploaded" % fileName))
+        # TODO: test
+        if self.checkAddress(fileName):
+            with open(self.getOsPath()+fileName, 'wb') as f:
+                f.write(data)
+            self.writeMsg(self.encMsg("%s uploaded" % fileName))
+        else:
+            self.writeMsg(self.encMsg("Upload Failed"))
 
     def dnl(self, fileName):
-        with open(self.getOsPath()+fileName, "rb") as f:
-            data = f.read()
-        self.writeMsg(self.encMsg(data))
+        #TODO: test
+        if self.checkAddress(fileName):
+            with open(self.getOsPath()+fileName, "rb") as f:
+                data = f.read()
+            self.writeMsg(self.encMsg(data))
+        else:
+            self.writeMsg(self.encMsg("Download Failed"))
 
     def rmf(self, fileName):
-        if os.path.exists(self.getOsPath() + fileName):
-            os.remove(self.getOsPath() + fileName)
-            self.writeMsg(self.encMsg("Removed"))
+        # TODO: test
+        if self.checkAddress(fileName):
+            if os.path.exists(self.getOsPath() + fileName):
+                os.remove(self.getOsPath() + fileName)
+                self.writeMsg(self.encMsg("Removed"))
+            else:
+                self.writeMsg(self.encMsg("The file does not exist"))
         else:
-            self.writeMsg(self.encMsg("The file does not exist"))
+            self.writeMsg(self.encMsg("Deletion Failed"))
 
     def checkAddress(self, addr):
         newDir = self.workingDir
@@ -287,6 +299,7 @@ def main():
             msg = msg.split(' '.encode('utf-8'), 2)
             cmd = msg[0].decode('utf-8').lower()
             if len(msg) > 1:
+                #TODO implement message length checks
                 args = msg[1:]
                 name = args[0].decode('utf-8')
             if cmd == "mkd":
