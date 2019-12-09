@@ -26,7 +26,7 @@ class Server:
         self.password = getpass.getpass("Enter RSA password: ")
         if serverRSA == None:
             serverRSA = self.serverAddress + '/serverRSApublic.pem'
-        if not os.path.exists(serverRSA):
+        if not os.path.exists(serverRSA + '/serverRSApublic.pem') or not os.path.exists(serverRSA + '/serverRSAprivate.pem'):
             serverRSA = os.getcwd() + '/example_server_keys'
         with open(serverRSA + '/serverRSApublic.pem', 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
