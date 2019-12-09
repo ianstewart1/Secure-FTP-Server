@@ -21,7 +21,7 @@ Final project for Applied Cryptography
   - -u: specifies that you are creating a new user folder on the server
   - -c [path]: specifies the directory of the client, this is where you can select files to upload and where files will be downloaded
   - -n [path]: specifies the network path, must be the same as the network path of the server
-  - -r [path]: specifies the path/location of the server public RSA key, if left empty it will expect a file with the RSA key named serverRSApublic.pem to be located within the client directory
+  - -r [path]: specifies the path/location of the server public RSA key, if left empty it will try to use the RSA keys from the example_rsa_keys folder in src
 
 #### 4. When prompted, enter your username and password if you are a returning user. If you are a new user enter a username and a password of your choice. 
 
