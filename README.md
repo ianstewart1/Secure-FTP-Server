@@ -37,21 +37,16 @@ Final project for Applied Cryptography
 2. If the message does not contain the -N flag, the server will hash the password given and check against the hashed password file stored in the user's folder. The server authenticates the client by confirming the two hashes are equal. 
 3. The server confirms authentication by sending the client their username encrypted in AES with the session key and nonce generated from the random bytes sent by the client
 
-**Diagram of session establishment**
-
-client              server
-|                     |
-|                     |
-|  message stuff cool |
-|                     |
-|                     |
 
 
-how your main protocol for transferring commands and files are implemented: 
-Message from client to server encrypted w AES in GCM mode
+**Protocol for commands:**
+1. When the client enters a command, the command, arguments and payload are sent over encrypted with AES using the session key and incremented nonce. 
+Ex: 
+Client command in the format: 'mkd <directory name>' will be encrypted as 'mkd <directory name>' and sent to the server 
+  
 
-how you store sensitive data like passwords and private keys on the server and the client (whatever applies): 
-Store passwords hashed in a file in the user's folder
-- user cannot see the file 
-Server stores its own public and private key in a file encrypted with AES GCM mode using its password 
-Client stores the Server's public RSA key 
+**Storing sensitive data:**
+* Hashed client passwords are stored on the server side in the user's folder (user does not have access to)
+* Server stores its public key in a plaintext file
+* Server stores its private key in a file encrypted with AES in GCM mode using its password
+* Client stores the Server's public RSA key in the client directory
