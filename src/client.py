@@ -21,6 +21,8 @@ class Client:
         self.clientAddress = client
         if serverRSA == None:
             serverRSA = self.clientAddress + '/serverRSApublic.pem'
+        if not os.path.exists(serverRSA):
+            serverRSA = os.getcwd() + "/example_server_keys/serverRSApublic.pem"
         self.serverRSApublic = serverRSA
         # used for keeping track of new messages
         self.lastMsg = 0
@@ -28,22 +30,17 @@ class Client:
         # set after initSession - session key
         self.AESKey = None
         # user params
-        self.username = None
-        self.password = None
-        self.filePassword = None
+        self.login()
         # network connection
         if network == None:
             network = os.getcwd().split('src')[0] + 'network'
             if not os.path.exists(network):
                 os.mkdir(network)
         self.networkPath = network
-        self.networkRef = None
+        self.networkRef = network_interface(self.networkPath, self.username)
 
     def initializeSession(self, newUser):
         print('Establishing session...')
-        self.login()
-        # initialize network connection
-        self.networkRef = network_interface(self.networkPath, self.username)
         # get a random bytestring to use as key
         self.AESKey = get_random_bytes(16)
 
@@ -56,7 +53,7 @@ class Client:
                 'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
 
         # initilize AES nonce (replay protection)
-        #   first 8 bytes are randomly generated for each session, last 8 bytes are a counter
+        # first 8 bytes are randomly generated for each session, last 8 bytes are a counter
         zero = 0
         randomBytes = get_random_bytes(8)
         self.msgNonce = randomBytes + zero.to_bytes(8, 'big')
@@ -76,6 +73,7 @@ class Client:
         # check if the server received and properly decoded the message
         if resp.decode('utf-8') != self.username:
             print('Communication error, quitting')
+            self.endSession()
             exit(1)
 
         print('Session established')
@@ -101,9 +99,6 @@ class Client:
         self.incNonce()
         try:
             plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
-            if(plain=="end_session"):
-                print("Session Closed")
-                self.endSession()
             return plain
         except ValueError:
             print('MAC verification failed, ending session...')
@@ -227,7 +222,7 @@ def main(newClient, client, network, serverRSA):
                 sys.exit(0)
             # print server response
             print(msg)
-    finally:
+    except KeyboardInterrupt:
         c.writeMsg(c.encMsg("end_session"))
 
 

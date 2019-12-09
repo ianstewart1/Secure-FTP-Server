@@ -26,10 +26,14 @@ class Server:
         self.password = getpass.getpass("Enter RSA password: ")
         if serverRSA == None:
             serverRSA = self.serverAddress + '/serverRSApublic.pem'
-        with open(self.serverAddress + '/serverRSApublic.pem', 'rb') as f:
+        if not os.path.exists(serverRSA):
+            serverRSA = os.getcwd() + "/example_server_keys/serverRSApublic.pem"
+        with open(serverRSA, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
-
-        self.getPrivateKey(self.serverAddress + '/serverRSAprivate.pem')
+        serverPrivate = self.serverAddress + '/serverRSAprivate.pem'
+        if not os.path.exists(serverPrivate):
+            serverPrivate = os.getcwd() + "/example_server_keys/serverRSAprivate.pem"
+        self.getPrivateKey(serverPrivate)
 
         self.workingDir = None
         self.currentUser = None
@@ -42,15 +46,16 @@ class Server:
             if not os.path.exists(network):
                 os.mkdir(network)
         self.networkPath = network
-        self.networkRef = None
+        self.networkRef = network_interface(self.networkPath, 'server')
         self.sessions = {}
         print("Server Running")
 
     def initSession(self, resp='', src=''):
-        self.networkRef = network_interface(self.networkPath, 'server')
+        print("initializing session")
         # wait for client message
         if resp == '' and src == '':
             resp, src = self.readMsg()
+        print(resp)
 
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
         sizeOfKey = self.serverRSApublic.size_in_bytes()
@@ -69,12 +74,15 @@ class Server:
         auth_type, username, password = resp.split(":".encode("utf-8"), 3)
         h = SHA256.new(data=password)
         password = h.digest()
+        print(username.decode('utf-8'))
         if auth_type.decode('utf-8') == "newusr":
             self.createNewUser(username.decode('utf-8'), password)
         if (not self.authUser(username.decode('utf-8'), password)):
             print('Nice try hacker man, get outta here!')
             self.writeMsg(self.encMsg("end_session"), username.decode('utf-8'))
-            return
+            time.sleep(.2)
+            self.initSession()
+            return False
 
         self.currentUser = username.decode('utf-8')
         self.workingDir = '/root'
@@ -84,6 +92,7 @@ class Server:
         self.writeMsg(serverResponse)
 
         self.sessions[self.currentUser] = Session(self.currentUser, self.AESKey, self.msgNonce, self.workingDir, self.lastMsg, self.networkRef)
+
         
 
     def createNewUser(self, username, passHash):
@@ -364,6 +373,7 @@ def main(server, network, serverRSA):
             print(f"Client command: {msg}{' '*20}")
         else:
             s.initSession(msg, src)
+            print("imeh ere")
 
 
 try:
