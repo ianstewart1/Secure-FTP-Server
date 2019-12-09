@@ -16,7 +16,7 @@ Final project for Applied Cryptography
   
 #### 3. Run the Client
 - `python3 client.py [flags]`
-- flags (All args are optional unless you are a new user and must use -N. Note that if -s serverRSA is left to default, the server public RSA key must be in the client    directory.)
+- flags (All args are optional unless you are a new user and must use -u. Note that if -s serverRSA is left to default, it will first check the specified server directory, and if it cannot find the keys there will default to those in the src/example_server_keys directory.)
   - -u: specifies that you are creating a new user folder on the server
   - -c [path]: specifies the directory of the client, this is where you can select files to upload and where files will be downloaded
   - -n [path]: specifies the network path, must be the same as the network path of the server
