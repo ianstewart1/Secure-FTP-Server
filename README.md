@@ -35,9 +35,9 @@ Final project for Applied Cryptography
 **Client authentication:**
 1. When the server recieves the initial message from the client containing the session key, username, password, etc. outlined in the diagram it will check if the new user flag -N is present. If it is, the server creates a new user folder named by the username. Inside the folder, the server will create a new file containing the user's password hashed by SHA256 and the folder the user will interact with. Note: the user only has access to the subfolder and cannot see their password file.
 2. If the message does not contain the -N flag, the server will hash the password given and check against the hashed password file stored in the user's folder. The server authenticates the client by confirming the two hashes are equal. 
-3. The server confirms authentication by sending the client their username encrypted in AES with the session key and nonce generated from the random bytes sent by the client
+3. The server confirms authentication by sending the client their username encrypted in AES with the session key and nonce generated from the random bytes sent by the client.
 
-![Session Establishment Diagram](diagrams/sessionEstablishmentDiagram)
+![Session Establishment Diagram](diagrams/sessionEstablishmentDiagram.png)
 
 
 **Protocol for commands:**
@@ -45,6 +45,8 @@ Final project for Applied Cryptography
 Ex: 
 Client command in the format: 'mkd <directory name>' will be encrypted as 'mkd <directory name>' and sent to the server 
   
+![Command Diagram](diagrams/commandDiagram.png)
+
 
 **Storing sensitive data:**
 * Hashed client passwords are stored on the server side in the user's folder (user does not have access to)
