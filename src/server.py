@@ -228,7 +228,7 @@ class Session:
                 os.mkdir(self.getOsPath() + '/' + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
-                self.writeMsg(self.encMsg("Permition Failed"))
+                self.writeMsg(self.encMsg("Permission Failed"))
         except OSError:
             self.writeMsg(self.encMsg("Mkd Failed"))
 
@@ -239,7 +239,7 @@ class Session:
                 os.rmdir(self.getOsPath() + "/" + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
-                self.writeMsg(self.encMsg("Permition Failed"))
+                self.writeMsg(self.encMsg("Permission Failed"))
         except OSError:
             self.writeMsg(self.encMsg("Deletion Failed"))
 
@@ -329,7 +329,6 @@ def main(server, network, serverRSA):
             msg = msg.split(' '.encode('utf-8'), 2)
             cmd = msg[0].decode('utf-8').lower()
             if len(msg) > 1:
-                #TODO implement message length checks
                 args = msg[1:]
                 name = args[0].decode('utf-8')
             if cmd == "mkd":
