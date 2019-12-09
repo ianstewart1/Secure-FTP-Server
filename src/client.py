@@ -30,6 +30,7 @@ class Client:
         # user params
         self.username = None
         self.password = None
+        self.filePassword = None
         # network connection
         if network == None:
             network = os.getcwd().split('src')[0] + 'network'
@@ -117,11 +118,14 @@ class Client:
         # called at the start of a session
         userN = ''
         passwrd = ''
-        while userN == '' or passwrd == '':
+        fpasswrd = ''
+        while userN == '' or passwrd == '' or fpasswrd == '':
             userN = input("Enter your username: ")
             passwrd = getpass.getpass("Enter your password: ")
+            fpasswrd = getpass.getpass("Enter your file encryption/decryption password: ")
         self.username = userN
         self.password = passwrd
+        self.filePassword = fpasswrd
 
     def encryptFile(self, file_in, file_out=''):
         # because server should never have access to plaintext file data
@@ -130,7 +134,7 @@ class Client:
         
         # derive file key from user password
         salt = get_random_bytes(16)
-        masterFile = scrypt(self.password.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
+        masterFile = scrypt(self.filePassword.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
         fileKey = get_random_bytes(16)
 
         # encrypt the file key
@@ -165,7 +169,7 @@ class Client:
                 [data[x:x+16] for x in (0, 16, 32, 48, 64, 80)]
             ciphertext = data[96:]
 
-        masterFile = scrypt(self.password.encode('utf-8'),
+        masterFile = scrypt(self.filePassword.encode('utf-8'),
                         salt, 16, N=2**20, r=8, p=1)
         # decrypt the session key with the public RSA key
         cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
@@ -247,7 +251,7 @@ serverRSA = None
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
         print('Usage: python network.py -h <help> -N <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA')
-        print('All args are optional. Note that if serverRSA is are left to default, the server public RSA key must be in the client directory')
+        print('All args are optional. Note that if serverRSA is left to default, the server public RSA key must be in the specified directory')
         sys.exit(0)
     elif opt == '-N' or opt == '--newuser':
         newUser = True
