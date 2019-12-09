@@ -3,6 +3,7 @@ Final project for Applied Cryptography
 
 ## How to Use
 *For easiest experience: navigate to the src folder and run network then server then client with no specifications for directories only use the -u flag to create a new user when running client for the first time. The RSA password for the server using the example RSA keys is test*
+*Note: Supports multiple clients*
 #### 1. Run the Network
 - `python3 network.py`
 - flags (All args are optional.)
