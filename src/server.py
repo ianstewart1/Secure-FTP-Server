@@ -369,7 +369,7 @@ def main(server, network, serverRSA):
 
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], shortopts='hS:n:s:', longopts=['help', 'server', 'network', 'serverRSA'])
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='hs:n:r:', longopts=['help', 'server', 'network', 'serverRSA'])
 except getopt.GetoptError:
 	print('Usage: python server.py -h)')
 	sys.exit(1)
@@ -380,14 +380,14 @@ serverRSA = None
 
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
-        print('Usage: python server.py -h <help> -S path_to_server_dir -n path_to_network_dir -s path_to_server_RSA_keys_directory')
+        print('Usage: python server.py -h <help> -s path_to_server_dir -n path_to_network_dir -r path_to_server_RSA_keys_directory')
         print('All args are optional. Note that if serverRSA is left to default, the server RSA keys must be in the server directory')
         sys.exit(0)
-    elif opt == '-S' or opt == '--server':
+    elif opt == '-s' or opt == '--server':
         server = arg
     elif opt == '-n' or opt == '--network':
         network = arg
-    elif opt == '-s' or opt == '--serverRSA':
+    elif opt == '-r' or opt == '--serverRSA':
         serverRSA = arg
 
 main(server, network, serverRSA)

@@ -9,18 +9,18 @@ Final project for Applied Cryptography
   
 2. Run the Server
 - `python3 server.py [flags]`
-- flags: (All args are optional. Note that if -s serverRSA is left to default, the server RSA keys must be in the server     directory.)
-  - -S [path]: specifies the path to the server folder
+- flags: (All args are optional. Note that if -s serverRSA is left to default, it will first check the specified server directory, and if it cannot find the keys there will default to those in the src/example_server_keys directory.)
+  - -s [path]: specifies the path to the server folder
   - -n [path]: specifies the path to the network directory
-  - -s [path]: specifies the path to the server RSA keys directory
+  - -r [path]: specifies the path to the directory containing the server RSA keys
   
 3. Run the Client
 - `python3 client.py [flags]`
 - flags (All args are optional unless you are a new user and must use -N. Note that if -s serverRSA is left to default, the server public RSA key must be in the client    directory.)
-  - -N: specifies that you are creating a new user folder on the server
-  - -n [path]: specifies the network path, must be the same as the network path of the server
+  - -u: specifies that you are creating a new user folder on the server
   - -c [path]: specifies the directory of the client, this is where you can select files to upload and where files will be downloaded
-  - -s [path]: specifies the path/location of the server public RSA key, if left empty it will expect a file with the RSA key named serverRSApublic.pem to be located within the client directory
+  - -n [path]: specifies the network path, must be the same as the network path of the server
+  - -r [path]: specifies the path/location of the server public RSA key, if left empty it will expect a file with the RSA key named serverRSApublic.pem to be located within the client directory
 
 4. When prompted, enter your username and password if you are a returning user. If you are a new user enter a username and a password of your choice. 
 
