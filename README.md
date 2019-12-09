@@ -39,7 +39,13 @@ Final project for Applied Cryptography
 
 **Diagram of session establishment**
 
-
+client              server
+|                     |
+|                     |
+|  message stuff cool |
+-----------------------
+|                     |
+|                     |
 
 
 how your main protocol for transferring commands and files are implemented: 
