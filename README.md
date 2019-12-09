@@ -24,7 +24,7 @@ Final project for Applied Cryptography
 
 #### 4. When prompted, enter your username and password if you are a returning user. If you are a new user enter a username and a password of your choice. 
 
-#### 5. Once the server responds with "Session established.", you may interact with the server normally using any of the commands below. 
+#### 5. Once the server responds with "Session established", you may interact with the server normally using any of the commands below. 
 
 ## Client Commands
 #### Command Structure: cmd [args]
@@ -42,14 +42,15 @@ Final project for Applied Cryptography
 
 
 ## Encryption Specifications
-* Files are encrypted using AES in GCM mode and a password based key derived from scrypt using the password that the client enters as their file encryption/decryption password
-* Messages are encrypted using AES in GCM mode and a key created by the client a the beginning of each session
+* Files are encrypted using AES in GCM mode and a key derived using scrypt and the password that the client enters as their file encryption/decryption password
+* Messages are encrypted using AES in GCM mode and the key is prepended to the beginning of each session
 
 **Key establishment protocol:** 
-1. Client generates a session key of 16 random bytes
-2. This key is then encrypted with RSA using the server's public key
-3. The encrypted session key and initial nonce is sent to the server in a hybrid message with the random bytes that will be used to generate the nonce for each cipher and the login message in the form loginType:username:password
-4. Server responds with the client's username encrypted by the session key in AES
+1. Client generates a session key of 16 random bytes and a sequence of 8 random bytes to be used as part of the cipher nonce 
+2. The session key and random bytes are then encrypted with the server's public RSA key using PKCS1_OAEP 
+3. The session nonce is established by appending an 8 byte counter to the end of the random bytes (nonce is incremented after sending or receiving a message to prevent replay)
+3. The encrypted session key and random bytes are sent to the server in a hybrid message along with a login message in the form loginType:username:password encrypted with AES in GCM using the session key and session nonce
+4. Server responds with the client's username encrypted with AES in GCM using the new session key and now-shared session nonce
 
 **Client authentication:**
 1. When the server recieves the initial message from the client containing the session key, username, password, etc. outlined in the diagram it will check if the loginType is newusr. If it is and there is no other user with the same username, the server creates a new user folder in the server directory named by the username. Inside the folder, the server will create a new file containing the user's password hashed with SHA256 and a root folder, with which the user will interact. Note: the user only has access to the files and directories that are below the root directory and cannot see their hashed password file.
