@@ -241,7 +241,7 @@ serverRSA = None
 
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
-        print('Usage: python network.py -h <help> -N <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA')
+        print('Usage: python client.py -h <help> -N <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA')
         print('All args are optional. Note that if serverRSA is are left to default, the server public RSA key must be in the client directory')
         sys.exit(0)
     elif opt == '-N' or opt == '--newuser':

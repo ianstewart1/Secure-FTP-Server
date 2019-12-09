@@ -6,11 +6,11 @@ import time
 
 class Network:
 
-    def __init__(self, netAddress=os.getcwd()):
-        if 'src' in netAddress:
-            if os.path.exists(netAddress.split('src')[0] + 'network') == False:
-                os.mkdir(netAddress.split('src')[0] + 'network')
-            netAddress = netAddress.split('src')[0] + 'network'
+    def __init__(self, netAddress):
+        if netAddress == None:
+            if os.path.exists(os.getcwd().split('src')[0] + 'network') == False:
+                os.mkdir(os.getcwd().split('src')[0] + 'network')
+            netAddress = os.getcwd().split('src')[0] + 'network'
         self.networkAddress = netAddress
         self.addressList = []
         self.lastRead = {}
@@ -53,8 +53,8 @@ class Network:
             f.write(msg)
 
 
-def main():
-    n = Network()
+def main(network):
+    n = Network(network)
     n.clearDir()
     print('Running')
     while True:
@@ -65,4 +65,20 @@ def main():
                 n.writeMsg(src, dst, msg)
         time.sleep(0.2)
 
-main()
+try:
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='hn::', longopts=['help', 'network'])
+except getopt.GetoptError:
+	print('Usage: python network.py -h)')
+	sys.exit(1)
+
+network = None
+
+for opt, arg in opts:
+    if opt == '-h' or opt == '--help':
+        print('Usage: python network.py -h <help> -n path_to_network_dir')
+        print('All args are optional')
+        sys.exit(0)
+    elif opt == '-n' or opt == '--network':
+        network = arg
+
+main(network)
