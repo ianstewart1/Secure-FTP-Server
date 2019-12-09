@@ -38,7 +38,7 @@ Final project for Applied Cryptography
 |UPL|Uploads an encrypted version of a file from the client-side directory|[File Name]|
 |DNL|Downloads and decrypts a file from the server to the client-side directory|[File Name]|
 |RMF|Deletes a file on the server-side working directory|[File Name]|
-|end_session|Cleanly exits a session an alternative to ctrl+c|None|
+|end_session|Cleanly exits a session -- an alternative to ctrl+c|None|
 
 
 
