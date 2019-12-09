@@ -62,7 +62,8 @@ Final project for Applied Cryptography
 
 **Protocol for commands:**
 * When the client enters a command, the command, arguments and payload are sent over encrypted with AES using the session key and an incremented nonce. 
-* Ex: Client command in the format: 'mkd \<directory name\>' will be encrypted as 'mkd \<directory name\>' and sent to the server 
+* Ex: Client command in the format: 'mkd \<directory name\>' will be encrypted as 'mkd \<directory name\>' and sent to the server
+* The server will always respond once the command has been received, parsed and operated on. The response can relate to a command or just be a simple confirmation of task accomplishment depending on the command issued by the client
   
 ![Command Diagram](diagrams/b.png)
 
@@ -70,5 +71,5 @@ Final project for Applied Cryptography
 **Storing sensitive data:**
 * Hashed client passwords are stored on the server side in the user's folder (user does not have access to)
 * Server stores its public key in a plaintext file
-* Server stores its private key in a file encrypted with AES in GCM mode using a key derived from the password
-* The client's files are stored on the server side in the user's directory encrypted using AES with a password derived key that only the client ever uses or sees
+* Server stores its private key in a file encrypted with AES in GCM mode using a key derived from the server password
+* The client's files on the server are encrypted using AES in GCM mode with a password derived key that is never sent to the server
