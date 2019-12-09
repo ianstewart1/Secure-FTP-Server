@@ -54,8 +54,8 @@ Final project for Applied Cryptography
 
 **Client authentication:**
 1. When the server recieves the initial message from the client containing the session key, username, password, etc. outlined in the diagram it will check if the loginType is newusr. If it is and there is no other user with the same username, the server creates a new user folder in the server directory named by the username. Inside the folder, the server will create a new file containing the user's password hashed with SHA256 and a root folder, with which the user will interact. Note: the user only has access to the files and directories that are below the root directory and cannot see their hashed password file.
-2. If the message loginType is login, the server will hash the password given and check against the hashed password file stored in the user's folder. The server authenticates the client by confirming the two hashes are equal. 
-3. The server confirms authentication by sending the client their username encrypted in AES with the session key and nonce generated from the random bytes sent by the client.
+2. If the message loginType is login, the server will hash the password with SHA256 and check against the hashed password file stored in the user's folder. The server authenticates the client by confirming the two hashes are equal. 
+3. The server confirms authentication by sending the client their username encrypted in AES with the session key and nonce generated from the random bytes sent by the client. (server can only know these values if it successfully decrypts the RSA-encrypted first message from the client)
 
 ![Session Establishment Diagram](diagrams/a.png)
 
