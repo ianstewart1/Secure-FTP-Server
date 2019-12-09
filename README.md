@@ -38,12 +38,12 @@ Final project for Applied Cryptography
 **Key establishment protocol:** 
 1. Client generates a session key of 16 random bytes
 2. This key is then encrypted with RSA using the server's public key
-3. The encrypted session key is sent to the server in a hybrid message with the random bytes that will be used to generate the nonce for each cipher and the login message in the form loginType:username:password
+3. The encrypted session key and initial nonce is sent to the server in a hybrid message with the random bytes that will be used to generate the nonce for each cipher and the login message in the form loginType:username:password
 4. Server responds with the client's username encrypted by the session key in AES
 
 **Client authentication:**
-1. When the server recieves the initial message from the client containing the session key, username, password, etc. outlined in the diagram it will check if the new user flag -N is present. If it is, the server creates a new user folder named by the username. Inside the folder, the server will create a new file containing the user's password hashed by SHA256 and the folder the user will interact with. Note: the user only has access to the subfolder and cannot see their password file.
-2. If the message does not contain the -N flag, the server will hash the password given and check against the hashed password file stored in the user's folder. The server authenticates the client by confirming the two hashes are equal. 
+1. When the server recieves the initial message from the client containing the session key, username, password, etc. outlined in the diagram it will check if the loginType is newusr. If it is and there is no other user with the same username, the server creates a new user folder in the server directory named by the username. Inside the folder, the server will create a new file containing the user's password hashed with SHA256 and a root folder, with which the user will interact. Note: the user only has access to the files and directories that are below the root directory and cannot see their hashed password file.
+2. If the message loginType is login, the server will hash the password given and check against the hashed password file stored in the user's folder. The server authenticates the client by confirming the two hashes are equal. 
 3. The server confirms authentication by sending the client their username encrypted in AES with the session key and nonce generated from the random bytes sent by the client.
 
 ![Session Establishment Diagram](diagrams/a.png)
