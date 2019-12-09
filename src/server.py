@@ -50,14 +50,15 @@ class Server:
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
         sizeOfKey = self.serverRSApublic.size_in_bytes()
 
-        # Parse out and decrypt session key
-        enc_session_key = resp[:sizeOfKey] 
-        self.AESKey = decryptRSAcipher.decrypt(enc_session_key)
+        # Parse out and decrypt session key and random bytes
+        encAESandRandom = resp[:sizeOfKey] 
+        AESandRandom = decryptRSAcipher.decrypt(encAESandRandom)
+        self.AESKey = AESandRandom[:16]
+        zero = 0
+        self.msgNonce = AESandRandom[16:] + zero.to_bytes(8, 'big')
 
         # Get message content
-        zero = 0
-        self.msgNonce = resp[sizeOfKey:sizeOfKey+8] + zero.to_bytes(8, 'big')
-        resp = self.processResp(resp[sizeOfKey+8:])
+        resp = self.processResp(resp[sizeOfKey:])
 
         # Authenticate user
         auth_type, username, password = resp.split(":".encode("utf-8"), 3)
@@ -307,7 +308,6 @@ class Session:
             else:
                 if(os.path.exists(self.getOsPath() + nd)):
                     newDir = newDir+"/"+nd
-        print(newDir)
         return True
 
 
@@ -323,7 +323,6 @@ def main():
             # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
             msg = msg.split(' '.encode('utf-8'), 2)
             cmd = msg[0].decode('utf-8').lower()
-            print(cmd)
             if len(msg) > 1:
                 #TODO implement message length checks
                 args = msg[1:]
@@ -355,14 +354,11 @@ def main():
                 del s.sessions[src]
                 print(s.sessions)
             else:
-                print(cmd)
                 s.sessions[src].writeMsg(s.sessions[src].encMsg("Invalid command"))
             time.sleep(0.5)
             # print client message
             print(f"Client command: {msg}{' '*20}")
-            # time.sleep(0.5)
         else:
-            print(src)
             s.initSession(msg, src)
 
 
