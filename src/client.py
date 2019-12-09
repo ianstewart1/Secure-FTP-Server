@@ -37,7 +37,6 @@ class Client:
         self.login()
         # initialize network connection
         self.networkRef = network_interface(self.networkPath, self.username)
-        # time.sleep(1) # <-- I don't like this
 
         self.AESKey = get_random_bytes(16)
 
@@ -45,7 +44,7 @@ class Client:
         cipher_rsa = PKCS1_OAEP.new(self.serverRSApublic)
         enc_session_key = cipher_rsa.encrypt(self.AESKey)
 
-        # Encrypt the data with the AES session key
+        # Set Cipher content
         if not newUser:
             cipherContent = "login:".encode('utf-8') + self.username.encode(
                 'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
@@ -179,7 +178,7 @@ class Client:
 
     def endSession(self):
         print("ending session")
-        self.writeMsg(self.encMsg("END_SESSION"))
+        self.writeMsg(self.encMsg("end_session"))
         self.clearMessages()
         print("session over")
 
@@ -229,11 +228,11 @@ def main(newClient = False):
             # print server response
             print(msg)
     finally:
-        c.endSession()
+        pass
 
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], shortopts='hn', longopts=['help', 'newuser'])
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='hn:p', longopts=['help', 'newuser', 'path'])
 except getopt.GetoptError:
 	print('Usage: python client.py -n)')
 	sys.exit(1)
@@ -246,5 +245,7 @@ for opt, arg in opts:
         sys.exit(0)
     elif opt == '-n' or opt == '--newuser':
         newUser = True
+    elif opt == '-p' or opt == '--path':
+        path = arg
 
 main(newUser)

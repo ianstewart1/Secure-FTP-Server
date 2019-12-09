@@ -196,7 +196,7 @@ class Session:
     def mkd(self, folderName):
         # makes the directory from the working directory, WARNING accepts paths
         try:
-            if self.checkAddress(folderName):
+            if self.addressGuard(folderName):
                 os.mkdir(self.getOsPath() + '/' + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
@@ -207,7 +207,7 @@ class Session:
     def rmd(self, folderName):
         # removes a directory if it exists, WARNING accepts paths
         try:
-            if self.checkAddress(folderName):
+            if self.addressGuard(folderName):
                 os.rmdir(self.getOsPath() + "/" + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
@@ -221,7 +221,7 @@ class Session:
 
     def cwd(self, newDir):
         # navigates to a new working directory. Checks address for security but also should be secure
-        if self.checkAddress(newDir):
+        if self.addressGuard(newDir):
             dirs = newDir.split("/")
             for nd in dirs:
                 if (nd == ".."):
@@ -247,7 +247,7 @@ class Session:
 
     def upl(self, fileName, data):
         # Uploads a file shouldn't accept paths but check address is run for redundant security
-        if self.checkAddress(fileName):
+        if self.addressGuard(fileName):
             with open(self.getOsPath()+fileName, 'wb') as f:
                 f.write(data)
             self.writeMsg(self.encMsg("%s uploaded" % fileName))
@@ -256,7 +256,7 @@ class Session:
 
     def dnl(self, fileName):
         # Downloads a given filename WARNING: accepts paths
-        if self.checkAddress(fileName):
+        if self.addressGuard(fileName):
             with open(self.getOsPath()+fileName, "rb") as f:
                 data = f.read()
             self.writeMsg(self.encMsg(data))
@@ -265,7 +265,7 @@ class Session:
 
     def rmf(self, fileName):
         # Removes a file at the specified filename WARNING: accepts paths which is why the check address is run
-        if self.checkAddress(fileName):
+        if self.addressGuard(fileName):
             if os.path.exists(self.getOsPath() + fileName):
                 os.remove(self.getOsPath() + fileName)
                 self.writeMsg(self.encMsg("Removed"))
@@ -274,7 +274,7 @@ class Session:
         else:
             self.writeMsg(self.encMsg("Deletion Failed"))
 
-    def checkAddress(self, addr):
+    def addressGuard(self, addr):
         # ensures that whatever address is being passed is within the root directory of the user
         newDir = self.workingDir
         dirs = addr.split("/")
@@ -331,8 +331,9 @@ def main():
             elif cmd == "rmf":
                 s.sessions[src].rmf(name)
             elif cmd == "end_session":
-                print("bye")
+                s.sessions[src].writeMsg(s.sessions[src].encMsg("end_session"))
                 del s.sessions[src]
+                print(s.sessions)
             else:
                 print(cmd)
                 s.sessions[src].writeMsg(s.sessions[src].encMsg("Invalid command"))
