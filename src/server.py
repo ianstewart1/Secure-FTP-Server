@@ -25,11 +25,6 @@ class Server:
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
-
-        # self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
-        # with open(self.serverRSAprivate, 'rb') as f:
-        #     self.serverRSAprivate = RSA.import_key(f.read())
-
         self.getPrivateKey(self.serverAddress + '/serverRSAprivate.pem')
 
 
