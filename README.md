@@ -43,7 +43,6 @@ client              server
 |                     |
 |                     |
 |  message stuff cool |
------------------------
 |                     |
 |                     |
 
