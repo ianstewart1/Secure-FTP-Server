@@ -2,11 +2,12 @@
 Final project for Applied Cryptography
 
 ## How to Use
+*For easiest experience: navigate to the src folder and run network then server then client with no specifications for directories only use the -u flag to create a new user when running client for the first time*
 #### 1. Run the Network
 - `python3 network.py`
 - flags (All args are optional.)
   - -n [path]: specifies the path to the network directory
-  
+
 #### 2. Run the Server
 - `python3 server.py [flags]`
 - flags: (All args are optional. Note that if -s serverRSA is left to default, it will first check the specified server directory, and if it cannot find the keys there will default to those in the src/example_server_keys directory.)
