@@ -49,8 +49,8 @@ Final project for Applied Cryptography
 1. Client generates a session key of 16 random bytes and a sequence of 8 random bytes to be used as part of the cipher nonce 
 2. The session key and random bytes are then encrypted with the server's public RSA key using PKCS1_OAEP 
 3. The session nonce is established by appending an 8 byte counter to the end of the random bytes (nonce is incremented after sending or receiving a message to prevent replay)
-3. The encrypted session key and random bytes are sent to the server in a hybrid message along with a login message in the form loginType:username:password encrypted with AES in GCM using the session key and session nonce
-4. Server responds with the client's username encrypted with AES in GCM using the new session key and now-shared session nonce
+4. The encrypted session key and random bytes are sent to the server in a hybrid message along with a login message in the form loginType:username:password encrypted with AES in GCM using the session key and session nonce
+5. Server responds with the client's username encrypted with AES in GCM using the new session key and now-shared session nonce
 
 **Client authentication:**
 1. When the server recieves the initial message from the client containing the session key, username, password, etc. outlined in the diagram it will check if the loginType is newusr. If it is and there is no other user with the same username, the server creates a new user folder in the server directory named by the username. Inside the folder, the server will create a new file containing the user's password hashed with SHA256 and a root folder, with which the user will interact. Note: the user only has access to the files and directories that are below the root directory and cannot see their hashed password file.
