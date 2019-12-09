@@ -1,11 +1,14 @@
 import os
 import getopt
 import time
+import getpass
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import SHA256
 from netinterface import network_interface
+from Crypto.Protocol.KDF import scrypt
+from Crypto.Random import get_random_bytes
 
 
 class Server:
@@ -16,12 +19,20 @@ class Server:
         if 'src' in server:
             server = server.split('src')[0] + 'server'
         self.serverAddress = server
+        # password to protect private rsa
+        self.password = getpass.getpass("Enter RSA password: ")
         self.serverRSApublic = self.serverAddress + '/serverRSApublic.pem'
-        self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
-        with open(self.serverRSAprivate, 'rb') as f:
-            self.serverRSAprivate = RSA.import_key(f.read())
+
+
+        # self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
+        # with open(self.serverRSAprivate, 'rb') as f:
+        #     self.serverRSAprivate = RSA.import_key(f.read())
+
+        self.getPrivateKey(self.serverAddress + '/serverRSAprivate.pem')
+
+
         self.workingDir = None
         self.currentUser = None
         self.lastMsg = 0
@@ -33,6 +44,7 @@ class Server:
         self.networkPath = network
         self.networkRef = None
         self.sessions = {}
+        print("Server Running")
 
     def initSession(self, resp = '', src = ''):
         self.networkRef = network_interface(self.networkPath, 'server')
@@ -126,6 +138,21 @@ class Server:
 
     def incNonce(self):
         self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
+
+    def getPrivateKey(self, path):
+        with open(path, 'rb') as f:
+            salt, keyTag, keyNonce, enc_file_key, nonce, tag, ciphertext = \
+                [f.read(x)
+                 for x in (16, 16, 16, 16, 16, 16, -1)]
+        masterFile = scrypt(self.password.encode('utf-8'),
+                        salt, 16, N=2**20, r=8, p=1)
+        cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
+        session_key = cipher_aes.decrypt_and_verify(enc_file_key, keyTag)
+        cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
+        rsaKey = cipher_aes.decrypt_and_verify(ciphertext, tag)
+        self.serverRSAprivate = RSA.import_key(rsaKey)
+        print("Key Loaded")
+
 
 
 class Session:
@@ -226,14 +253,12 @@ class Session:
             for nd in dirs:
                 if (nd == ".."):
                     if(self.workingDir == '/root'):
-                        return False
+                        break
                     else:
                         self.workingDir = "/".join(self.workingDir.split("/")[:-1])
                 else:
                     if(os.path.exists(self.getOsPath() + nd)):
                         self.workingDir = self.workingDir+"/"+nd
-        else:
-            self.writeMsg(self.encMsg("Permission Failed"))
         self.writeMsg(self.encMsg(
             "Working directory is now: %s" % self.workingDir))
 

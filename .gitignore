@@ -3,3 +3,4 @@
 /server/USERS/*
 .DS_Store
 client/*
+src/__pycache__/netinterface.cpython-37.pyc
