@@ -22,6 +22,8 @@ class Server:
             if not os.path.exists(server):
                 os.mkdir(server)
         self.serverAddress = server
+        if not os.path.exists(self.serverAddress + "/USERS"):
+            os.mkdir(self.serverAddress + "/USERS")
         # password to protect private rsa
         self.password = getpass.getpass("Enter RSA password: ")
         if serverRSA == None:
