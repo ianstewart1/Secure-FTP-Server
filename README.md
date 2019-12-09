@@ -1,24 +1,30 @@
 # Secure-FTP-Server
 Final project for Applied Cryptography
 
-
-## How To Setup
-
 ## How to Use
 1. Run the Network
 - `python3 network.py`
+- flags (All args are optional.)
+  - -n [path]: specifies the path to the network directory
+  
 2. Run the Server
 - `python3 server.py [flags]`
-- flags:
-  - s [path]: specifies the path to the server folder
+- flags: (All args are optional. Note that if -s serverRSA is left to default, the server RSA keys must be in the server     directory.)
+  - -S [path]: specifies the path to the server folder
+  - -n [path]: specifies the path to the network directory
+  - -s [path]: specifies the path to the server RSA keys directory
   
 3. Run the Client
 - `python3 client.py [flags]`
-- flags
+- flags (All args are optional unless you are a new user and must use -N. Note that if -s serverRSA is left to default, the server public RSA key must be in the client    directory.)
   - -N: specifies that you are creating a new user folder on the server
   - -n [path]: specifies the network path, must be the same as the network path of the server
   - -c [path]: specifies the directory of the client, this is where you can select files to upload and where files will be downloaded
   - -s [path]: specifies the path/location of the server public RSA key, if left empty it will expect a file with the RSA key named serverRSApublic.pem to be located within the client directory
+
+4. When prompted, enter your username and password if you are a returning user. If you are a new user enter a username and a password of your choice. 
+
+5. Once the server responds with "Session established.", you may interact with the server normally using any of the commands below. 
 
 ## Client Commands
 |Command|Description|Arguments|
@@ -62,3 +68,4 @@ Final project for Applied Cryptography
 * Server stores its public key in a plaintext file
 * Server stores its private key in a file encrypted with AES in GCM mode using its password
 * Client stores the Server's public RSA key in the client directory
+* The client's files are stored on the server side in the user's directory encrypted using AES with a password protected key
