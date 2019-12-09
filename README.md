@@ -6,11 +6,19 @@ Final project for Applied Cryptography
 
 ## How to Use
 1. Run the Network
+- `python3 network.py`
 2. Run the Server
+- `python3 server.py [flags]`
+- flags:
+  - s [path]: specifies the path to the server folder
+  
 3. Run the Client
-
-### Flags:
-* -N: creates a new user
+- `python3 client.py [flags]`
+- flags
+  - -N: specifies that you are creating a new user folder on the server
+  - -n [path]: specifies the network path, must be the same as the network path of the server
+  - -c [path]: specifies the directory of the client, this is where you can select files to upload and where files will be downloaded
+  - -s [path]: specifies the path/location of the server public RSA key, if left empty it will expect a file with the RSA key named serverRSApublic.pem to be located within the client directory
 
 ## Client Commands
 |Command|Description|Arguments|
