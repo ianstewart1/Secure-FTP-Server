@@ -196,7 +196,7 @@ class Session:
         # makes the directory from the working directory
         try:
             if self.checkAddress(folderName):
-                os.mkdir(self.getOsPath() + folderName)
+                os.mkdir(self.getOsPath() + '/' + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
                 self.writeMsg(self.encMsg("Permition Failed"))
@@ -219,7 +219,16 @@ class Session:
 
     def cwd(self, newDir):
         if self.checkAddress(newDir):
-            self.workingDir += newDir
+            dirs = newDir.split("/")
+            for nd in dirs:
+                if (nd == ".."):
+                    if(self.workingDir == '/root'):
+                        return False
+                    else:
+                        self.workingDir = "/".join(self.workingDir.split("/")[:-1])
+                else:
+                    if(os.path.exists(self.getOsPath() + nd)):
+                        self.workingDir = self.workingDir+"/"+nd
         else:
             self.writeMsg(self.encMsg("Permission Failed"))
         self.writeMsg(self.encMsg(
