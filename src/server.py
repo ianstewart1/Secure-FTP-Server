@@ -72,7 +72,7 @@ class Server:
             self.createNewUser(username.decode('utf-8'), password)
         if (not self.authUser(username.decode('utf-8'), password)):
             print('Nice try hacker man, get outta here!')
-            self.writeMsg(self.encMsg("END_SESSION"), username.decode('utf-8'))
+            self.writeMsg(self.encMsg("end_session"), username.decode('utf-8'))
             return
 
         self.currentUser = username.decode('utf-8')
