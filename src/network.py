@@ -66,5 +66,6 @@ def main():
             if (dst != '' and msg != ''):
                 n.writeMsg(src, dst, msg)
         cycles += 1
+        time.sleep(.2)
 
 main()
