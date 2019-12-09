@@ -43,14 +43,15 @@ class Server:
         decryptRSAcipher = PKCS1_OAEP.new(self.serverRSAprivate)
         sizeOfKey = self.serverRSApublic.size_in_bytes()
 
-        # Parse out and decrypt session key
-        enc_session_key = resp[:sizeOfKey] 
-        self.AESKey = decryptRSAcipher.decrypt(enc_session_key)
+        # Parse out and decrypt session key and random bytes
+        encAESandRandom = resp[:sizeOfKey] 
+        AESandRandom = decryptRSAcipher.decrypt(encAESandRandom)
+        self.AESKey = AESandRandom[:16]
+        zero = 0
+        self.msgNonce = AESandRandom[16:] + zero.to_bytes(8, 'big')
 
         # Get message content
-        zero = 0
-        self.msgNonce = resp[sizeOfKey:sizeOfKey+8] + zero.to_bytes(8, 'big')
-        resp = self.processResp(resp[sizeOfKey+8:])
+        resp = self.processResp(resp[sizeOfKey:])
 
         # Authenticate user
         auth_type, username, password = resp.split(":".encode("utf-8"), 3)

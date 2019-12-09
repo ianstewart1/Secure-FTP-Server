@@ -46,10 +46,6 @@ class Client:
         # get a random bytestring to use as key
         self.AESKey = get_random_bytes(16)
 
-        # Encrypt the session key with the server's public RSA key
-        cipher_rsa = PKCS1_OAEP.new(self.serverRSApublic)
-        enc_session_key = cipher_rsa.encrypt(self.AESKey)
-
         # encrypt the data with the AES session key
         if not newUser:
             plaintext = "login:".encode('utf-8') + self.username.encode(
@@ -66,8 +62,12 @@ class Client:
         # encrypt plaintext message and prepend with cipher tag
         messageContent = self.encMsg(plaintext)
 
+        # Encrypt the session key with the server's public RSA key
+        cipher_rsa = PKCS1_OAEP.new(self.serverRSApublic)
+        encAESandRandom = cipher_rsa.encrypt(self.AESKey + randomBytes)
+
         # send first message
-        self.writeMsg(enc_session_key + randomBytes + messageContent)
+        self.writeMsg(encAESandRandom + messageContent)
 
         # receive and Process Server Response
         resp = self.processResp(self.readMsg())
