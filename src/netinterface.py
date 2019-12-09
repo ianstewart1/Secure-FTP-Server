@@ -1,9 +1,11 @@
-import os, time
+import os
+import time
 
 
 class network_interface:
     own_addr = None
     net_path = None
+    # track last read message
     last_read = -1
 	
     def __init__(self, path, addr):
@@ -11,16 +13,19 @@ class network_interface:
         self.own_addr = '/' + addr
         
         addr_dir = self.net_path + self.own_addr
+        # make diretories if they don't exist
         if not os.path.exists(addr_dir):
             os.mkdir(addr_dir)
             os.mkdir(addr_dir + '/IN')
             os.mkdir(addr_dir + '/OUT')
+        # clear pre-existing messages to ensure fresh session
         self.clear_msgs()
 	
     def send_msg(self, dst, msg):
 
         out_dir = self.net_path + self.own_addr + '/OUT'
         msgs = sorted(os.listdir(out_dir))
+
 
         if len(msgs) > 0:
             last_msg = msgs[-1].split('--')[0]
@@ -56,7 +61,5 @@ class network_interface:
         addr_dir = self.net_path + self.own_addr
         for msg in os.listdir(addr_dir + '/IN'):
             os.remove(addr_dir + '/IN/' + msg)
-        # os.remove(addr_dir + '/IN')
         for msg in os.listdir(addr_dir + '/OUT'):
             os.remove(addr_dir + '/OUT/' + msg)
-        # os.remove(addr_dir + '/OUT')

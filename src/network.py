@@ -56,15 +56,13 @@ class Network:
 def main():
     n = Network()
     n.clearDir()
-    cycles = 0
+    print('Running')
     while True:
-        print('Running', end='\r') # + '.'*(cycles%4) + ' '*4, end='\r')
         n.getAddresses()
         for addr in n.addressList:
             src, dst, msg = n.readMsg(addr)
             if (dst != '' and msg != ''):
                 n.writeMsg(src, dst, msg)
-        cycles += 1
-        time.sleep(.2)
+        time.sleep(0.2)
 
 main()
