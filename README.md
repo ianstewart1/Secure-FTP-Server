@@ -27,6 +27,7 @@ Final project for Applied Cryptography
 5. Once the server responds with "Session established.", you may interact with the server normally using any of the commands below. 
 
 ## Client Commands
+Command structure: cmd [args]
 |Command|Description|Arguments|
 |---|---|---|
 |MKD|Creates a directory in the server-side working directory of the user|[Directory Name]|
