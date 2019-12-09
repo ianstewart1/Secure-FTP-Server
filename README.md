@@ -30,6 +30,7 @@ Final project for Applied Cryptography
 |UPL|Uploads an encrypted version of a file from the client-side directory|[File Name]|
 |DNL|Downloads and decrypts a file from the server to the client-side directory|[File Name]|
 |RMF|Deletes a file on the server-side working directory|[File Name]|
+|end_session|Cleanly exits a session|None|
 
 ## Encryption Specifications
 * Files are encrypted using AES in GCM mode and a password based key derived from scrypt using the password that the client enters as their file encryption/decryption password
