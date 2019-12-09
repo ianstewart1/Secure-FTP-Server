@@ -66,7 +66,7 @@ def main(network):
         time.sleep(0.2)
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], shortopts='hn::', longopts=['help', 'network'])
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='hn:', longopts=['help', 'network'])
 except getopt.GetoptError:
 	print('Usage: python network.py -h)')
 	sys.exit(1)

@@ -106,6 +106,8 @@ class Client:
 
     def loadRSAKeys(self):
         # called during session intialization to load the server's public RSA key for use in the first message to server
+        if not os.path.exists(self.serverRSApublic):
+            self.serverRSApublic = os.getcwd() + '/example_server_keys/serverRSApublic.pem'
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
@@ -227,7 +229,7 @@ def main(newClient, client, network, serverRSA):
 
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], shortopts='hNc:n:s:', longopts=['help', 'newuser', 'client', 'network', 'serverRSA'])
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='huc:n:s:', longopts=['help', 'newuser', 'client', 'network', 'serverRSA'])
 except getopt.GetoptError:
 	print('Usage: python client.py -h)')
 	sys.exit(1)
@@ -239,16 +241,16 @@ serverRSA = None
 
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
-        print('Usage: python network.py -h <help> -N <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA')
-        print('All args are optional. Note that if serverRSA is left to default, the server public RSA key must be in the specified directory')
+        print('Usage: python network.py -h <help> -u <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA_dir')
+        print('All args are optional unless you are a new user and must use -N')
         sys.exit(0)
-    elif opt == '-N' or opt == '--newuser':
+    elif opt == '-u' or opt == '--newuser':
         newUser = True
     elif opt == '-c' or opt == '--client':
         client = arg
     elif opt == '-n' or opt == '--network':
         network = arg
-    elif opt == '-s' or opt == '--serverRSA':
+    elif opt == '-r' or opt == '--serverRSA':
         serverRSA = arg
 
 main(newUser, client, network, serverRSA)
