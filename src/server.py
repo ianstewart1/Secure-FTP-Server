@@ -1,11 +1,14 @@
 import os
 import getopt
 import time
+import getpass
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import SHA256
 from netinterface import network_interface
+from Crypto.Protocol.KDF import scrypt
+from Crypto.Random import get_random_bytes
 
 
 class Server:
@@ -16,12 +19,20 @@ class Server:
         if 'src' in server:
             server = server.split('src')[0] + 'server'
         self.serverAddress = server
+        # password to protect private rsa
+        self.password = getpass.getpass("Enter RSA password: ")
         self.serverRSApublic = self.serverAddress + '/serverRSApublic.pem'
-        self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
-        with open(self.serverRSAprivate, 'rb') as f:
-            self.serverRSAprivate = RSA.import_key(f.read())
+
+
+        # self.serverRSAprivate = self.serverAddress + '/serverRSAprivate.pem'
+        # with open(self.serverRSAprivate, 'rb') as f:
+        #     self.serverRSAprivate = RSA.import_key(f.read())
+
+        self.getPrivateKey(self.serverAddress + '/serverRSAprivate.pem')
+
+
         self.workingDir = None
         self.currentUser = None
         self.lastMsg = 0
@@ -33,6 +44,7 @@ class Server:
         self.networkPath = network
         self.networkRef = None
         self.sessions = {}
+        print("Server Running")
 
     def initSession(self, resp = '', src = ''):
         self.networkRef = network_interface(self.networkPath, 'server')
@@ -61,7 +73,8 @@ class Server:
             self.createNewUser(username.decode('utf-8'), password)
         if (not self.authUser(username.decode('utf-8'), password)):
             print('Nice try hacker man, get outta here!')
-            exit(1)
+            self.writeMsg(self.encMsg("end_session"), username.decode('utf-8'))
+            return
 
         self.currentUser = username.decode('utf-8')
         self.workingDir = '/root'
@@ -76,7 +89,8 @@ class Server:
     def createNewUser(self, username, passHash):
         userfolder = self.serverAddress + "/USERS/" + username
         if os.path.exists(userfolder):
-            self.writeMsg(self.encMsg("Invalid Username"))
+            self.writeMsg(self.encMsg("Invalid username"), username)
+            self.writeMsg(self.encMsg("end_session"), username)
         else:
             os.mkdir(userfolder)
             os.mkdir(userfolder + "/root")
@@ -115,17 +129,31 @@ class Server:
             print('MAC verification failed, ending session...')
             exit(1)
 
-    def writeMsg(self, msg):
-        self.networkRef.send_msg(self.currentUser, msg)
+    def writeMsg(self, msg, dst = ''):
+        if(dst == ''):
+            dst = self.currentUser
+        self.networkRef.send_msg(dst, msg)
 
     def readMsg(self):
         return self.networkRef.receive_msg()
 
-    def getOsPath(self):
-        return self.serverAddress + '/USERS/' + self.currentUser + self.workingDir + "/"
-
     def incNonce(self):
         self.msgNonce = self.msgNonce[:8] + (int.from_bytes(self.msgNonce[8:], 'big') + 1).to_bytes(8, 'big')
+
+    def getPrivateKey(self, path):
+        with open(path, 'rb') as f:
+            salt, keyTag, keyNonce, enc_file_key, nonce, tag, ciphertext = \
+                [f.read(x)
+                 for x in (16, 16, 16, 16, 16, 16, -1)]
+        masterFile = scrypt(self.password.encode('utf-8'),
+                        salt, 16, N=2**20, r=8, p=1)
+        cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
+        session_key = cipher_aes.decrypt_and_verify(enc_file_key, keyTag)
+        cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
+        rsaKey = cipher_aes.decrypt_and_verify(ciphertext, tag)
+        self.serverRSAprivate = RSA.import_key(rsaKey)
+        print("Key Loaded")
+
 
 
 class Session:
@@ -194,9 +222,9 @@ class Session:
     # • RMF – removing a file from a folder on the server
 
     def mkd(self, folderName):
-        # makes the directory from the working directory
+        # makes the directory from the working directory, WARNING accepts paths
         try:
-            if self.checkAddress(folderName):
+            if self.addressGuard(folderName):
                 os.mkdir(self.getOsPath() + '/' + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
@@ -205,9 +233,9 @@ class Session:
             self.writeMsg(self.encMsg("Mkd Failed"))
 
     def rmd(self, folderName):
-        # removes a directory if it exists
+        # removes a directory if it exists, WARNING accepts paths
         try:
-            if self.checkAddress(folderName):
+            if self.addressGuard(folderName):
                 os.rmdir(self.getOsPath() + "/" + folderName)
                 self.writeMsg(self.encMsg("Finished"))
             else:
@@ -216,26 +244,27 @@ class Session:
             self.writeMsg(self.encMsg("Deletion Failed"))
 
     def gwd(self):
+        # returns the working directory
         self.writeMsg(self.encMsg("Working directory is: " + self.workingDir))
 
     def cwd(self, newDir):
-        if self.checkAddress(newDir):
+        # navigates to a new working directory. Checks address for security but also should be secure
+        if self.addressGuard(newDir):
             dirs = newDir.split("/")
             for nd in dirs:
                 if (nd == ".."):
                     if(self.workingDir == '/root'):
-                        return False
+                        break
                     else:
                         self.workingDir = "/".join(self.workingDir.split("/")[:-1])
                 else:
                     if(os.path.exists(self.getOsPath() + nd)):
                         self.workingDir = self.workingDir+"/"+nd
-        else:
-            self.writeMsg(self.encMsg("Permission Failed"))
         self.writeMsg(self.encMsg(
             "Working directory is now: %s" % self.workingDir))
 
     def lst(self):
+        # lists the contents of the working directory
         dirList = ", ".join(os.listdir(self.serverAddress + '/USERS/' +
                                        self.currentUser + self.workingDir))
         if len(dirList) == 0:
@@ -243,8 +272,8 @@ class Session:
         self.writeMsg(self.encMsg(dirList))
 
     def upl(self, fileName, data):
-        # TODO: test
-        if self.checkAddress(fileName):
+        # Uploads a file shouldn't accept paths but check address is run for redundant security
+        if self.addressGuard(fileName):
             with open(self.getOsPath()+fileName, 'wb') as f:
                 f.write(data)
             self.writeMsg(self.encMsg("%s uploaded" % fileName))
@@ -252,8 +281,8 @@ class Session:
             self.writeMsg(self.encMsg("Upload Failed"))
 
     def dnl(self, fileName):
-        #TODO: test
-        if self.checkAddress(fileName):
+        # Downloads a given filename WARNING: accepts paths
+        if self.addressGuard(fileName):
             with open(self.getOsPath()+fileName, "rb") as f:
                 data = f.read()
             self.writeMsg(self.encMsg(data))
@@ -261,8 +290,8 @@ class Session:
             self.writeMsg(self.encMsg("Download Failed"))
 
     def rmf(self, fileName):
-        # TODO: test
-        if self.checkAddress(fileName):
+        # Removes a file at the specified filename WARNING: accepts paths which is why the check address is run
+        if self.addressGuard(fileName):
             if os.path.exists(self.getOsPath() + fileName):
                 os.remove(self.getOsPath() + fileName)
                 self.writeMsg(self.encMsg("Removed"))
@@ -271,7 +300,8 @@ class Session:
         else:
             self.writeMsg(self.encMsg("Deletion Failed"))
 
-    def checkAddress(self, addr):
+    def addressGuard(self, addr):
+        # ensures that whatever address is being passed is within the root directory of the user
         newDir = self.workingDir
         dirs = addr.split("/")
         for nd in dirs:
@@ -299,6 +329,7 @@ def main():
             # parse msg into parts all msgs will be recieved iwht cmd file/foldername payload
             msg = msg.split(' '.encode('utf-8'), 2)
             cmd = msg[0].decode('utf-8').lower()
+            print(cmd)
             if len(msg) > 1:
                 #TODO implement message length checks
                 args = msg[1:]
@@ -326,8 +357,9 @@ def main():
             elif cmd == "rmf":
                 s.sessions[src].rmf(name)
             elif cmd == "end_session":
-                print("bye")
+                s.sessions[src].writeMsg(s.sessions[src].encMsg("end_session"))
                 del s.sessions[src]
+                print(s.sessions)
             else:
                 print(cmd)
                 s.sessions[src].writeMsg(s.sessions[src].encMsg("Invalid command"))

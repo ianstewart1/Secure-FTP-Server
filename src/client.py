@@ -99,7 +99,10 @@ class Client:
         # we must increment when we receive a message too, as we only have one counter
         self.incNonce()
         try:
-            return cipher_aes.decrypt_and_verify(ciphertext, tag)
+            plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            if(plain=="end_session"):
+                sys.exit(1)
+            return plain
         except ValueError:
             print('MAC verification failed, ending session...')
             exit(1)
@@ -151,13 +154,13 @@ class Client:
         # parse a given file
         if data == None:
             file_in = open(path, 'rb')
-            salt, keyTag, keyNonce, enc_session_key, nonce, tag, ciphertext = \
+            salt, keyTag, keyNonce, enc_file_key, nonce, tag, ciphertext = \
                 [file_in.read(x)
                 for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
             file_in.close()
         # decrypt payload into a file
         else:
-            salt, keyTag, keyNonce, enc_session_key, nonce, tag = \
+            salt, keyTag, keyNonce, enc_file_key, nonce, tag = \
                 [data[x:x+16] for x in (0, 16, 32, 48, 64, 80)]
             ciphertext = data[96:]
 
@@ -165,7 +168,7 @@ class Client:
                         salt, 16, N=2**20, r=8, p=1)
         # decrypt the session key with the public RSA key
         cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
-        session_key = cipher_aes.decrypt_and_verify(enc_session_key, keyTag)
+        session_key = cipher_aes.decrypt_and_verify(enc_file_key, keyTag)
 
         # decrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
@@ -186,8 +189,10 @@ class Client:
         self.networkRef.clear_msgs()
 
     def endSession(self):
-        self.writeMsg(self.encMsg("END_SESSION"))
+        print("ending session")
+        self.writeMsg(self.encMsg("end_session"))
         self.clearMessages()
+        print("session over")
 
 
 def main(newClient, client, network, serverRSA):
@@ -219,9 +224,8 @@ def main(newClient, client, network, serverRSA):
                 msg = c.processResp(c.readMsg()).decode('utf-8')
             # print server response
             print(msg)
-
     finally:
-        c.endSession()
+        pass
 
 
 try:
