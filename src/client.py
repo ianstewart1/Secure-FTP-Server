@@ -101,7 +101,8 @@ class Client:
         try:
             plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
             if(plain=="end_session"):
-                sys.exit(1)
+                print("Session Closed")
+                self.endSession()
             return plain
         except ValueError:
             print('MAC verification failed, ending session...')
@@ -192,7 +193,8 @@ class Client:
         print("ending session")
         self.writeMsg(self.encMsg("end_session"))
         self.clearMessages()
-        print("session over")
+        print("Session over")
+        sys.exit(0)
 
 
 def main(newClient, client, network, serverRSA):
@@ -222,10 +224,13 @@ def main(newClient, client, network, serverRSA):
                 msg = msg[4:] + ' downloaded'
             else:
                 msg = c.processResp(c.readMsg()).decode('utf-8')
+            if msg == "end_session":
+                print("Session Ended")
+                sys.exit(0)
             # print server response
             print(msg)
     finally:
-        pass
+        c.writeMsg(c.encMsg("end_session"))
 
 
 try:
