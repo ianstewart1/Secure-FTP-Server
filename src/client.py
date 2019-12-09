@@ -13,11 +13,14 @@ from netinterface import network_interface
 
 class Client:
 
-    def __init__(self, client=os.getcwd(), network=os.getcwd()):
-        if 'src' in client:
-            client = client.split('src')[0] + 'client'
+    def __init__(self, client, network, serverRSA):
+        if client == None:
+            client = os.getcwd().split('src')[0] + 'client'
+            if not os.path.exists(client):
+                os.mkdir(client)
         self.clientAddress = client
-        self.serverRSApublic = self.clientAddress + '/serverRSApublic.pem'
+        if serverRSA == None:
+            self.serverRSApublic = self.clientAddress + '/serverRSApublic.pem'
         # used for keeping track of new messages
         self.lastMsg = 0
         self.msgNonce = None
@@ -27,76 +30,81 @@ class Client:
         self.username = None
         self.password = None
         # network connection
-        if 'src' in network:
-            network = network.split('src')[0] + 'network'
+        if network == None:
+            network = os.getcwd().split('src')[0] + 'network'
+            if not os.path.exists(network):
+                os.mkdir(network)
         self.networkPath = network
         self.networkRef = None
 
-    def initializeSession(self, newUser = False):
+    def initializeSession(self, newUser):
         print('Establishing session...')
         self.login()
         # initialize network connection
         self.networkRef = network_interface(self.networkPath, self.username)
-
+        # get a random bytestring to use as key
         self.AESKey = get_random_bytes(16)
 
-        # Encrypt the session key with the public RSA key
+        # Encrypt the session key with the server's public RSA key
         cipher_rsa = PKCS1_OAEP.new(self.serverRSApublic)
         enc_session_key = cipher_rsa.encrypt(self.AESKey)
 
-        # Encrypt the data with the AES session key
+        # encrypt the data with the AES session key
         if not newUser:
-            cipherContent = "login:".encode('utf-8') + self.username.encode(
+            plaintext = "login:".encode('utf-8') + self.username.encode(
                 'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
         else:
-            cipherContent = "newusr:".encode('utf-8') + self.username.encode(
+            plaintext = "newusr:".encode('utf-8') + self.username.encode(
                 'utf-8') + ':'.encode('utf-8') + self.password.encode('utf-8')
-        # Initilize AES nonce (replay protection)
+
+        # initilize AES nonce (replay protection)
+        #   first 8 bytes are randomly generated for each session, last 8 bytes are a counter
         zero = 0
         randomBytes = get_random_bytes(8)
         self.msgNonce = randomBytes + zero.to_bytes(8, 'big')
-        
-        messageContent = self.encMsg(cipherContent)
+        # encrypt plaintext message and prepend with cipher tag
+        messageContent = self.encMsg(plaintext)
 
-        # Send first message
+        # send first message
         self.writeMsg(enc_session_key + randomBytes + messageContent)
 
-        # Receive and Process Server Response
+        # receive and Process Server Response
         resp = self.processResp(self.readMsg())
 
-        # Check if the server recieved and properly decoded the message
+        # check if the server received and properly decoded the message
         if resp.decode('utf-8') != self.username:
             print('Communication error, quitting')
             exit(1)
+
         print('Session established')
 
     def encMsg(self, message, data=b''):
         if isinstance(message, str):
             message = message.encode('utf-8')
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, self.msgNonce)
-        if data!=b'':
+        if data != b'':
             cipher_text, tag = cipher_aes.encrypt_and_digest(message + " ".encode('utf-8') + data)
         else:
             cipher_text, tag = cipher_aes.encrypt_and_digest(message)
+        # increment local instance of message nonce used to set up AES GCM cipher
         self.incNonce()
         return tag + cipher_text
 
     def processResp(self, resp):
-        """
-        Takes in a message and returns the plaintext using the AESKey
-        """
+        # takes in a message and returns the plaintext using the AESKey
         tag = resp[:16]
         ciphertext = resp[16:]
         cipher_aes = AES.new(self.AESKey, AES.MODE_GCM, self.msgNonce)
+        # we must increment when we receive a message too, as we only have one counter
         self.incNonce()
         try:
-            plain = cipher_aes.decrypt_and_verify(ciphertext, tag)
-            return plain
+            return cipher_aes.decrypt_and_verify(ciphertext, tag)
         except ValueError:
             print('MAC verification failed, ending session...')
             exit(1)
 
     def loadRSAKeys(self):
+        # called during session intialization to load the server's public RSA key for use in the first message to server
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
@@ -111,52 +119,54 @@ class Client:
         self.password = passwrd
 
     def encryptFile(self, file_in, file_out=''):
-        # because server should not have plaintext
+        # because server should never have access to plaintext file data
         with open(self.clientAddress + '/' + file_in, 'rb') as f:
             data = f.read()
         
+        # derive file key from user password
         salt = get_random_bytes(16)
-        keyKey = scrypt(self.password.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
-        session_key = get_random_bytes(16)
-        # Encrypt the file key
-        cipher_aes = AES.new(keyKey, AES.MODE_GCM)
-        enc_session_key, keyTag = cipher_aes.encrypt_and_digest(session_key)
+        masterFile = scrypt(self.password.encode('utf-8'), salt, 16, N=2**20, r=8, p=1)
+        fileKey = get_random_bytes(16)
+
+        # encrypt the file key
+        cipher_aes = AES.new(masterFile, AES.MODE_GCM)
+        enc_file_key, keyTag = cipher_aes.encrypt_and_digest(fileKey)
         keyNonce = cipher_aes.nonce
 
-        # Encrypt the data with the AES file key
-        cipher_aes = AES.new(session_key, AES.MODE_GCM)
+        # encrypt the data with the AES file key
+        cipher_aes = AES.new(fileKey, AES.MODE_GCM)
         ciphertext, tag = cipher_aes.encrypt_and_digest(data)
 
-        # If we want to write to another file
+        # if we want to write to another file
         if file_out != '':
             with open(self.clientAddress + '/' + file_out, 'wb') as f:
                 [f.write(x)
-                 for x in (salt, keyTag, keyNonce, enc_session_key, cipher_aes.nonce, tag, ciphertext)]
-        return salt + keyTag + keyNonce + enc_session_key + cipher_aes.nonce + tag + ciphertext
+                 for x in (salt, keyTag, keyNonce, enc_file_key, cipher_aes.nonce, tag, ciphertext)]
+        return salt + keyTag + keyNonce + enc_file_key + cipher_aes.nonce + tag + ciphertext
 
     def decryptFile(self, path, data=None):
         path = self.clientAddress + '/' + path
 
-        # Decrypt a give file
+        # parse a given file
         if data == None:
             file_in = open(path, 'rb')
             salt, keyTag, keyNonce, enc_session_key, nonce, tag, ciphertext = \
                 [file_in.read(x)
                 for x in (16, 16, 16, 16, 16, 16, -1)]  # (keyTag, keyNonce, key, nonce, tag, ciphertext)
             file_in.close()
-        # Decrypt payload into a file
+        # decrypt payload into a file
         else:
             salt, keyTag, keyNonce, enc_session_key, nonce, tag = \
                 [data[x:x+16] for x in (0, 16, 32, 48, 64, 80)]
             ciphertext = data[96:]
 
-        keyKey = scrypt(self.password.encode('utf-8'),
+        masterFile = scrypt(self.password.encode('utf-8'),
                         salt, 16, N=2**20, r=8, p=1)
-        # Decrypt the session key with the public RSA key
-        cipher_aes = AES.new(keyKey, AES.MODE_GCM, keyNonce)
+        # decrypt the session key with the public RSA key
+        cipher_aes = AES.new(masterFile, AES.MODE_GCM, keyNonce)
         session_key = cipher_aes.decrypt_and_verify(enc_session_key, keyTag)
 
-        # Decrypt the data with the AES session key
+        # decrypt the data with the AES session key
         cipher_aes = AES.new(session_key, AES.MODE_GCM, nonce)
         data = cipher_aes.decrypt_and_verify(ciphertext, tag)
         with open(path, 'wb') as f:
@@ -178,27 +188,12 @@ class Client:
         self.writeMsg(self.encMsg("END_SESSION"))
         self.clearMessages()
 
-    ### COMMANDS ###
 
-    # • MKD – creating a folder on the server
-    # • RMD – removing a folder from the server
-    # • GWD – asking for the name of the current folder(working directory) on the server
-    # • CWD – changing the current folder on the server
-    # • LST – listing the content of a folder on the server
-    # • UPL – uploading a file to the server
-    # • DNL – downloading a file from the server
-    # • RMF – removing a file from a folder on the server
-
-
-def main(newClient=False):
-    c = Client()
+def main(newClient, client, network, serverRSA):
+    c = Client(client, network, serverRSA)
     try:
-        # TODO: add getopt to specify client folder destination
         c.loadRSAKeys()
-        if newClient:
-            c.initializeSession(True)
-        else:
-            c.initializeSession()
+        c.initializeSession(newClient)
         # set up session keys and establish secure connection here
         while True:
             # send message to server
@@ -229,18 +224,28 @@ def main(newClient=False):
 
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], shortopts='hn', longopts=['help', 'newuser'])
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='hNc:n:s:', longopts=['help', 'newuser', 'client', 'network', 'serverRSA'])
 except getopt.GetoptError:
-	print('Usage: python client.py -n)')
+	print('Usage: python client.py -h)')
 	sys.exit(1)
 
 newUser = False
+client = None
+network = None
+serverRSA = None
 
 for opt, arg in opts:
     if opt == '-h' or opt == '--help':
-        print('Usage: python network.py -n')
+        print('Usage: python network.py -h <help> -N <new user> -c path_to_client_dir -n path_to_network_dir -s path_to_server_public_RSA')
+        print('All args are optional')
         sys.exit(0)
-    elif opt == '-n' or opt == '--newuser':
+    elif opt == '-N' or opt == '--newuser':
         newUser = True
+    elif opt == '-c' or opt == '--client':
+        client = arg
+    elif opt == '-n' or opt == '--network':
+        network = arg
+    elif opt == '-s' or opt == '--serverRSA':
+        serverRSA = arg
 
-main(newUser)
+main(newUser, client, network, serverRSA)
