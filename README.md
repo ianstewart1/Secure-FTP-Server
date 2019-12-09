@@ -1,12 +1,14 @@
-# Secure-FTP-Server
-Final project for Applied Cryptography
+# Secure FTP Server
+Final project for Applied Cryptography. A pseudoserver that transfers files and executes commands between a server and client directories. It supports multiple sessions on one server and features a fake network to transport messages between the server and its clients.
 
 ## How to Use
+*For easiest experience: navigate to the src folder and run network then server then client with no specifications for directories only use the -u flag to create a new user when running client for the first time. The RSA password for the server using the example RSA keys is test*
+
 #### 1. Run the Network
 - `python3 network.py`
 - flags (All args are optional.)
   - -n [path]: specifies the path to the network directory
-  
+
 #### 2. Run the Server
 - `python3 server.py [flags]`
 - flags: (All args are optional. Note that if -s serverRSA is left to default, it will first check the specified server directory, and if it cannot find the keys there will default to those in the src/example_server_keys directory.)
@@ -16,11 +18,11 @@ Final project for Applied Cryptography
   
 #### 3. Run the Client
 - `python3 client.py [flags]`
-- flags (All args are optional unless you are a new user and must use -N. Note that if -s serverRSA is left to default, the server public RSA key must be in the client    directory.)
+- flags (All args are optional unless you are a new user and must use -u. Note that if -s serverRSA is left to default, it will first check the specified server directory, and if it cannot find the keys there will default to those in the src/example_server_keys directory.)
   - -u: specifies that you are creating a new user folder on the server
   - -c [path]: specifies the directory of the client, this is where you can select files to upload and where files will be downloaded
   - -n [path]: specifies the network path, must be the same as the network path of the server
-  - -r [path]: specifies the path/location of the server public RSA key, if left empty it will expect a file with the RSA key named serverRSApublic.pem to be located within the client directory
+  - -r [path]: specifies the path/location of the server public RSA key, if left empty it will try to use the RSA keys from the example_rsa_keys folder in src
 
 #### 4. When prompted, enter your username and password if you are a returning user. If you are a new user enter a username and a password of your choice. 
 
@@ -37,13 +39,14 @@ Final project for Applied Cryptography
 |UPL|Uploads an encrypted version of a file from the client-side directory|[File Name]|
 |DNL|Downloads and decrypts a file from the server to the client-side directory|[File Name]|
 |RMF|Deletes a file on the server-side working directory|[File Name]|
-|end_session|Cleanly exits a session|None|
+|end_session|Cleanly exits a session -- an alternative to ctrl+c|None|
 
 
 
 ## Encryption Specifications
 * Files are encrypted using AES in GCM mode and a key derived using scrypt and the password that the client enters as their file encryption/decryption password
-* Messages are encrypted using AES in GCM mode and the key is prepended to the beginning of each session
+* Messages are encrypted using AES in GCM mode and the key is established by the user at the beginning of each session
+* *Note: AES with GCM both decrypts and verifies the message authenticity eliminating the need for a MAC. Furthermore the nonce used is incremented with every message sent and recieved which protects messages from being replayed* 
 
 **Key establishment protocol:** 
 1. Client generates a session key of 16 random bytes and a sequence of 8 random bytes to be used as part of the cipher nonce 
