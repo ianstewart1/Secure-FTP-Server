@@ -45,7 +45,7 @@ Final project for Applied Cryptography
 ## Encryption Specifications
 * Files are encrypted using AES in GCM mode and a key derived using scrypt and the password that the client enters as their file encryption/decryption password
 * Messages are encrypted using AES in GCM mode and the key is established by the user at the beginning of each session
-*Note: AES with GCM both decrypts and verifies the message authenticity eliminating the need for a MAC. Furthermore the nonce used is incremented with every message sent and recieved which protects messages from being replayed* 
+* *Note: AES with GCM both decrypts and verifies the message authenticity eliminating the need for a MAC. Furthermore the nonce used is incremented with every message sent and recieved which protects messages from being replayed* 
 
 **Key establishment protocol:** 
 1. Client generates a session key of 16 random bytes and a sequence of 8 random bytes to be used as part of the cipher nonce 
