@@ -110,6 +110,8 @@ class Client:
 
     def loadRSAKeys(self):
         # called during session intialization to load the server's public RSA key for use in the first message to server
+        if not os.path.exists(self.serverRSApublic):
+            self.serverRSApublic = os.getcwd() + '/example_server_keys/serverRSApublic.pem'
         with open(self.serverRSApublic, 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 

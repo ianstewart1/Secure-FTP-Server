@@ -26,10 +26,12 @@ class Server:
         self.password = getpass.getpass("Enter RSA password: ")
         if serverRSA == None:
             serverRSA = self.serverAddress + '/serverRSApublic.pem'
-        with open(self.serverAddress + '/serverRSApublic.pem', 'rb') as f:
+        if not os.path.exists(serverRSA):
+            serverRSA = os.getcwd() + '/example_server_keys'
+        with open(serverRSA + '/serverRSApublic.pem', 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
-        self.getPrivateKey(self.serverAddress + '/serverRSAprivate.pem')
+        self.getPrivateKey(serverRSA + '/serverRSAprivate.pem')
 
         self.workingDir = None
         self.currentUser = None
