@@ -2,6 +2,7 @@ import os
 import getopt
 import time
 import getpass
+import sys
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Util.Padding import pad, unpad
@@ -15,18 +16,20 @@ class Server:
 
     ## INITIALIZATION
     
-    def __init__(self, server=os.getcwd(), network=os.getcwd()):
-        if 'src' in server:
-            server = server.split('src')[0] + 'server'
+    def __init__(self, server, network, serverRSA):
+        if server == None:
+            server = os.getcwd().split('src')[0] + 'server'
+            if not os.path.exists(server):
+                os.mkdir(server)
         self.serverAddress = server
         # password to protect private rsa
         self.password = getpass.getpass("Enter RSA password: ")
-        self.serverRSApublic = self.serverAddress + '/serverRSApublic.pem'
-        with open(self.serverRSApublic, 'rb') as f:
+        if serverRSA == None:
+            serverRSA = self.serverAddress + '/serverRSApublic.pem'
+        with open(self.serverAddress + '/serverRSApublic.pem', 'rb') as f:
             self.serverRSApublic = RSA.import_key(f.read())
 
         self.getPrivateKey(self.serverAddress + '/serverRSAprivate.pem')
-
 
         self.workingDir = None
         self.currentUser = None
@@ -34,14 +37,16 @@ class Server:
         self.msgNonce = None
         self.AESKey = None
         # network connection
-        if 'src' in network:
-            network = network.split('src')[0] + 'network'
+        if network == None:
+            network = os.getcwd().split('src')[0] + 'network'
+            if not os.path.exists(network):
+                os.mkdir(network)
         self.networkPath = network
         self.networkRef = None
         self.sessions = {}
         print("Server Running")
 
-    def initSession(self, resp = '', src = ''):
+    def initSession(self, resp='', src=''):
         self.networkRef = network_interface(self.networkPath, 'server')
         # wait for client message
         if resp == '' and src == '':
@@ -311,8 +316,8 @@ class Session:
         return True
 
 
-def main():
-    s = Server()
+def main(server, network, serverRSA):
+    s = Server(server, network, serverRSA)
     # set up session keys and establish secure connection here
     s.initSession()
     while True:
@@ -361,4 +366,26 @@ def main():
             s.initSession(msg, src)
 
 
-main()
+try:
+	opts, args = getopt.getopt(sys.argv[1:], shortopts='hS:n:s:', longopts=['help', 'server', 'network', 'serverRSA'])
+except getopt.GetoptError:
+	print('Usage: python server.py -h)')
+	sys.exit(1)
+
+server = None
+network = None
+serverRSA = None
+
+for opt, arg in opts:
+    if opt == '-h' or opt == '--help':
+        print('Usage: python server.py -h <help> -N -S path_to_server_dir -n path_to_network_dir -s path_to_server_RSA_keys_directory')
+        print('All args are optional. Note that if serverRSA is are left to default, the server RSA keys must be in the server directory')
+        sys.exit(0)
+    elif opt == '-S' or opt == '--server':
+        server = arg
+    elif opt == '-n' or opt == '--network':
+        network = arg
+    elif opt == '-s' or opt == '--serverRSA':
+        serverRSA = arg
+
+main(server, network, serverRSA)

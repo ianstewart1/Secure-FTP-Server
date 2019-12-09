@@ -23,16 +23,16 @@ Final project for Applied Cryptography
 ## Client Commands
 |Command|Description|Arguments|
 |---|---|---|
-|MKD|   |   |
-|RMD|   |   |
-|GWD|   |   |
-|LST|   |   |
-|UPL|   |   |
-|DNL|   |   |
-|RMF|   |   |
+|MKD|Creates a directory in the server-side working directory of the user|[Directory Name]|
+|RMD|Deletes a directory in the server-side working directory if it exists|[Directory Name]|
+|GWD|Returns the server working directory|None|
+|LST|Lists the contents of the server working directory|None|
+|UPL|Uploads an encrypted version of a file from the client-side directory|[File Name]|
+|DNL|Downloads and decrypts a file from the server to the client-side directory|[File Name]|
+|RMF|Deletes a file on the server-side working directory|[File Name]|
 
 ## Encryption Specifications
-* Files are encrypted using AES in GCM mode and a key derived from scrypt
+* Files are encrypted using AES in GCM mode and a password based key derived from scrypt using the password that the client enters as their file encryption/decryption password
 * Messages are encrypted using AES in GCM mode and a key created by the client a the beginning of each session
 
 **Key establishment protocol:** 
@@ -50,7 +50,7 @@ Final project for Applied Cryptography
 
 
 **Protocol for commands:**
-* When the client enters a command, the command, arguments and payload are sent over encrypted with AES using the session key and incremented nonce. 
+* When the client enters a command, the command, arguments and payload are sent over encrypted with AES using the session key and an incremented nonce. 
 * Ex: Client command in the format: 'mkd \<directory name\>' will be encrypted as 'mkd \<directory name\>' and sent to the server 
   
 ![Command Diagram](diagrams/b.png)
