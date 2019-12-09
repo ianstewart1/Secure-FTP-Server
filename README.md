@@ -27,7 +27,7 @@ Final project for Applied Cryptography
 5. Once the server responds with "Session established.", you may interact with the server normally using any of the commands below. 
 
 ## Client Commands
-Command structure: cmd [args]
+#### Command Structure: cmd [args]
 |Command|Description|Arguments|
 |---|---|---|
 |MKD|Creates a directory in the server-side working directory of the user|[Directory Name]|
@@ -38,6 +38,8 @@ Command structure: cmd [args]
 |DNL|Downloads and decrypts a file from the server to the client-side directory|[File Name]|
 |RMF|Deletes a file on the server-side working directory|[File Name]|
 |end_session|Cleanly exits a session|None|
+
+
 
 ## Encryption Specifications
 * Files are encrypted using AES in GCM mode and a password based key derived from scrypt using the password that the client enters as their file encryption/decryption password
